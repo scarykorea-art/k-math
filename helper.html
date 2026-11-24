@@ -76,7 +76,7 @@ body { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-ins
   <div id="app" class="hide">
     <div class="top"><div class="row"><b class="grow" id="hdr"></b><button class="ghost" id="reload" style="color:#fff">↻</button></div><div class="mute" id="sub"></div></div>
     <div id="view"></div>
-    <div class="foot"><a href="helper.html" target="_top">새로고침</a> · <a href="#" id="out">나가기</a> · 화면 v3</div>
+    <div class="foot"><a href="helper.html" target="_top">새로고침</a> · <a href="#" id="out">나가기</a> · 화면 v4</div>
   </div>
 </div>
 <div class="modal-bg" id="mbg"><div class="modal" id="modal"></div></div>
@@ -140,11 +140,18 @@ function login() {
     m => { $('loginBtn').disabled = false; $('loginMsg').textContent = m; }, true);
 }
 function logout(msg) {
-  S.token = ''; try { sessionStorage.removeItem('k_htok'); } catch (e) {}
+  S.token = ''; S.d = null; try { sessionStorage.removeItem('k_htok'); sessionStorage.removeItem(CKEY); } catch (e) {}
   clearInterval(S.poll); $('app').classList.add('hide'); $('login').classList.remove('hide'); $('loginMsg').textContent = msg || '';
 }
-function load(quiet) { call('helperGetDay', [S.token], r => setDay(r), quiet ? () => {} : toastErr, quiet); }
-function setDay(r) {
+/* 빠르게 열기: 오늘 받은 화면을 이 기기에 기억 → 다음에 열 땐 먼저 보여 주고 뒤에서 새로 받음 */
+const CKEY = 'k_hcache';
+function load(quiet) {
+  if (!S.d) { try { const c = JSON.parse(sessionStorage.getItem(CKEY) || 'null'); if (c && c.date === new Date().toDateString()) { setDay(c.d, true); quiet = true; } } catch (e) {} }
+  const gen = S.gen;
+  call('helperGetDay', [S.token], r => { if (S.gen === gen && !S.q) setDay(r); else syncSoon(10); }, quiet ? () => {} : toastErr, quiet);
+}
+function setDay(r, fromCache) {
+  if (!fromCache) { try { sessionStorage.setItem(CKEY, JSON.stringify({ date: new Date().toDateString(), d: r })); } catch (e) {} }
   S.d = r;
   $('login').classList.add('hide'); $('app').classList.remove('hide');
   if (r.session && (!S.slot || !r.slots.some(s => s.col === S.slot))) S.slot = r.lastSlot || (r.slots[0] && r.slots[0].col) || 0;

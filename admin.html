@@ -125,7 +125,7 @@ body { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-ins
     </div>
     <div id="topAlert"></div>
     <div id="view"></div>
-    <div class="foot"><a href="admin.html" target="_top">새로고침</a> · 화면 v13</div>
+    <div class="foot"><a href="admin.html" target="_top">새로고침</a> · 화면 v14</div>
   </div>
 </div>
 
@@ -209,17 +209,28 @@ function login() {
 }
 function logout(msg, byUser) {
   if (byUser && S.token) call('adminLogout', [S.token], () => {}, () => {}, true);
-  S.token = ''; try { sessionStorage.removeItem('k_tok'); localStorage.removeItem('k_keep'); } catch (e) {}
+  S.token = ''; try { sessionStorage.removeItem('k_tok'); localStorage.removeItem('k_keep'); localStorage.removeItem(CKEY); } catch (e) {}
   $('app').classList.add('hide'); $('tabs').classList.add('hide'); $('login').classList.remove('hide'); $('loginMsg').textContent = msg || '';
 }
+/* 빠르게 열기: 오늘 받은 데이터를 이 기기에 기억해 두고, 다음에 열 땐 그걸 먼저 보여 준 뒤 뒤에서 새로 받아 바꿔 끼움 */
+const CKEY = 'k_cache';
+const cacheGet = () => { try { const c = JSON.parse(localStorage.getItem(CKEY) || 'null'); return c && c.date === todayStr() ? c : null; } catch (e) { return null; } };
+function cachePut(fn) { try { const c = cacheGet() || { date: todayStr(), boot: null, days: {} }; fn(c); localStorage.setItem(CKEY, JSON.stringify(c)); } catch (e) { try { localStorage.removeItem(CKEY); } catch (_) {} } }
+function showApp() { $('login').classList.add('hide'); $('app').classList.remove('hide'); $('tabs').classList.remove('hide'); }
 function boot() {
   $('loginMsg').textContent = '불러오는 중…';
+  const c = cacheGet(), cd = c && c.boot && c.days[c.boot.cls];
+  if (cd) { S.boot = Object.assign({}, c.boot); showApp(); S.cls = cd.cls; renderClsTabs(); setDay(cd); S.stale = true; $('saving').textContent = '새로 받는 중…'; setPending(1); }
+  const gen = S.gen;
   call('getBoot', [S.token], r => {
+    if (S.stale) { S.stale = false; setPending(-1); $('saving').textContent = '저장 중…'; }
     S.boot = r;
-    $('login').classList.add('hide'); $('app').classList.remove('hide'); $('tabs').classList.remove('hide');
-    S.cls = r.day.cls; renderClsTabs(); setDay(r.day);   // 첫 반 데이터가 같이 옴 (왕복 1번)
+    cachePut(x => { x.boot = Object.assign({}, r, { day: undefined, cls: r.day.cls }); });
+    showApp();
+    if (!cd || (S.gen === gen && S.cls === r.day.cls && !S.q)) { S.cls = r.day.cls; renderClsTabs(); setDay(r.day); }   // 첫 반 데이터가 같이 옴 (왕복 1번)
+    else { renderClsTabs(); renderTop(); syncSoon(10); }   // 그새 누르거나 반을 바꿨으면 지금 반 기준으로 다시 맞춤
     resumePend(); resumeOb();
-  }, m => { logout(m); }, true);
+  }, m => { if (S.stale) { S.stale = false; setPending(-1); $('saving').textContent = '저장 중…'; } logout(m); }, true);
 }
 function renderClsTabs() {
   const b = S.boot;
@@ -233,11 +244,15 @@ function loadClass(cls, sid, quiet) {
   S.cls = cls; S.sid = sid || '';
   if (!quiet) { S.listenFor = ''; S.listenSel = []; S.bonusMode = false; S.stu = ''; S.stuDetail = null; }
   renderClsTabs();
-  if (!quiet) $('view').innerHTML = '<div class="card mute">불러오는 중…</div>';
-  call('getClassDay', [S.token, cls, sid || ''], r => { if (S.cls === cls) setDay(r); });
+  const c = !sid && cacheGet(), cd = c && c.days[cls];   // 기억해 둔 그 반 오늘 화면을 먼저
+  if (cd) setDay(cd);
+  else if (!quiet) $('view').innerHTML = '<div class="card mute">불러오는 중…</div>';
+  const gen = S.gen;
+  call('getClassDay', [S.token, cls, sid || ''], r => { if (S.cls !== cls) return; if (!cd || S.gen === gen) setDay(r); else syncSoon(10); });
 }
 function setDay(r) {
   if (!r || !r.cls) return;
+  if (r.session && r.session.date === todayStr() || !r.session) cachePut(x => { x.days[r.cls] = r; });
   S.day = r; S.sid = r.session ? r.session.id : '';
   const s = r.session;
   if (!s || s.checked || !S.att || S.att.sid !== s.id) S.att = s ? { sid: s.id, abs: Object.assign({}, s.abs || {}) } : null;
