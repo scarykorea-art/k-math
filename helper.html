@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+
+<meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; min-width: 0; }
+  :root { --bg:#f1f5f9; --card:#fff; --ink:#0f172a; --mute:#64748b; --line:#e2e8f0; --ac:#7c3aed; --ok:#16a34a; --bad:#dc2626; }
+  body { font-family: 'Malgun Gothic', -apple-system, sans-serif; background: var(--bg); margin: 0; color: var(--ink); font-size: 15px; }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 8px 10px 40px; }
+  .card { background: var(--card); border-radius: 14px; padding: 14px; margin-bottom: 10px; box-shadow: 0 1px 6px rgba(0,0,0,.06); }
+  h2 { margin: 0 0 6px; font-size: 18px; } h3 { margin: 2px 0 8px; font-size: 15px; }
+  button { font-family: inherit; border: none; border-radius: 9px; font-weight: 700; cursor: pointer; font-size: 14px; padding: 8px 12px; background: #e2e8f0; color: #1e293b; }
+  button:disabled { opacity: .4; cursor: default; }
+  button.pri { background: var(--ac); color: #fff; } button.bad { background: #fee2e2; color: #b91c1c; } button.ghost { background: none; color: var(--ac); padding: 6px; }
+  input, select { font-family: inherit; font-size: 16px; padding: 9px 10px; border: 1.5px solid #cbd5e1; border-radius: 9px; width: 100%; background: #fff; }
+  .row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; } .grow { flex: 1; }
+  .mute { color: var(--mute); font-size: 12px; }
+  .top { position: sticky; top: 0; z-index: 20; background: var(--ac); color: #fff; border-radius: 0 0 14px 14px; padding: 10px 14px; margin: -8px -10px 10px; }
+  .top b { font-size: 17px; } .top .mute { color: #ede9fe; }
+  .sgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 5px; }
+  .sbtn { background: #f8fafc; border: 1.5px solid var(--line); padding: 8px 3px; font-size: 13px; font-weight: 600; position: relative; line-height: 1.25; }
+  .sbtn small { display: block; font-weight: 400; font-size: 11px; color: var(--mute); }
+  .sbtn.abs { background: #f1f5f9; color: #94a3b8; }
+  .sbtn.hl { border-color: var(--ac); background: #f5f3ff; }
+  .sbtn.pri1 { border-color: #f59e0b; background: #fffbeb; }
+  .sbtn .cnt { position: absolute; top: -6px; right: -4px; background: var(--ac); color: #fff; border-radius: 10px; font-size: 11px; padding: 1px 6px; }
+  .sbtn .pno { position: absolute; top: -6px; left: -4px; background: #f59e0b; color: #fff; border-radius: 10px; font-size: 11px; padding: 1px 6px; }
+  .plist { list-style: none; margin: 0; padding: 0; }
+  .plist li { display: flex; align-items: center; gap: 6px; padding: 7px 0; border-bottom: 1px dashed var(--line); }
+  .plist .no { width: 26px; height: 26px; border-radius: 13px; background: #f59e0b; color: #fff; font-weight: 800; display: flex; align-items: center; justify-content: center; font-size: 13px; flex: none; }
+  .plist li:first-child .no { background: #dc2626; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { background: #ede9fe; color: #5b21b6; border-radius: 16px; padding: 6px 11px; font-size: 13px; font-weight: 600; }
+  .pcard { border: 1.5px solid var(--line); border-radius: 12px; padding: 10px; margin-bottom: 8px; }
+  .pcard.on { border-color: var(--ac); background: #faf5ff; }
+  .wait { opacity: .55; }
+  .modal-bg { position: fixed; inset: 0; background: rgba(15,23,42,.45); z-index: 50; display: none; align-items: flex-end; justify-content: center; }
+  .modal-bg.on { display: flex; }
+  .modal { background: #fff; width: 100%; max-width: 480px; border-radius: 16px 16px 0 0; padding: 16px; max-height: 85vh; overflow: auto; }
+  @media (min-width: 700px) { .modal-bg { align-items: center; } .modal { border-radius: 16px; } }
+  .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #0f172a; color: #fff; padding: 9px 16px; border-radius: 18px; font-size: 13px; display: none; z-index: 60; max-width: 92%; text-align: center; }
+  .toast.err { background: var(--bad); }
+  .saving { position: fixed; top: 8px; right: 8px; background: #fff; color: var(--ac); font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 12px; display: none; z-index: 60; }
+  .foot { text-align: center; font-size: 12px; color: #94a3b8; margin: 16px 0; } .foot a { color: #64748b; }
+  [data-st] { position: relative; }
+  [data-st]::after { position: absolute; bottom: -8px; right: -4px; font-size: 10px; font-weight: 800; padding: 1px 6px; border-radius: 8px; white-space: nowrap; z-index: 3; pointer-events: none; line-height: 1.5; }
+  [data-st=wait]::after { content: '저장 중…'; background: #fde68a; color: #78350f; }
+  [data-st=ok]::after { content: '✓ 저장됨'; background: #16a34a; color: #fff; }
+  [data-st=err]::after { content: '✕ 실패'; background: #dc2626; color: #fff; }
+  .hide { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="login" class="card" style="max-width:420px;margin:40px auto;">
+    <h2>🎤 수학부장 · 발표 기록</h2>
+    <p class="mute" style="margin:0 0 10px">학번과 자기 1차 비밀번호(수행평가 조회 비번)로 들어와요.</p>
+    <input id="sid" placeholder="학번 5자리" inputmode="numeric" maxlength="5" style="margin-bottom:6px">
+    <input type="password" id="pw" placeholder="1차 비밀번호" autocomplete="current-password">
+    <button class="pri" id="loginBtn" style="width:100%;margin-top:8px;padding:12px;">들어가기</button>
+    <div id="loginMsg" class="mute" style="margin-top:8px;text-align:center;"></div>
+  </div>
+  <div id="app" class="hide">
+    <div class="top"><div class="row"><b class="grow" id="hdr"></b><button class="ghost" id="reload" style="color:#fff">↻</button></div><div class="mute" id="sub"></div></div>
+    <div id="view"></div>
+    <div class="foot"><a href="helper.html" target="_top">새로고침</a> · <a href="#" id="out">나가기</a> · 화면 v2</div>
+  </div>
+</div>
+<div class="modal-bg" id="mbg"><div class="modal" id="modal"></div></div>
+<div class="toast" id="toast"></div>
+<div class="saving" id="saving">저장 중…</div>
+<script>
+// ── GitHub Pages용: google.script.run 대신 Apps Script(doPost)에 직접 요청 ──
+window.K_API = "https://script.google.com/macros/s/AKfycbx7qXAz1wtloSsjqx3fTTIPi9GUXDKJZ9tsfLvEjrCf7Yj-fFZUG_pYFP4qLbrdTu2H0Q/exec";
+window.google = { script: {
+  run: (function () {
+    function mk(ok, fail) {
+      return new Proxy({}, { get(_, k) {
+        if (k === 'withSuccessHandler') return h => mk(h, fail);
+        if (k === 'withFailureHandler') return h => mk(ok, h);
+        if (k === 'withUserObject') return () => mk(ok, fail);
+        return (...args) => {
+          fetch(window.K_API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ fn: k, args }) })
+            .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+            .then(t => ok && ok(t), e => fail && fail(e));
+        };
+      } });
+    }
+    return new Proxy({}, { get(_, k) { return mk(null, null)[k]; } });
+  })(),
+  url: { getLocation(cb) { const p = {}; new URLSearchParams(location.search).forEach((v, k) => p[k] = v); cb({ parameter: p, hash: location.hash.slice(1) }); } }
+} };
+</script>
+<script>
+{
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const S = { token: '', d: null, slot: 0, listenFor: '', listenSel: [], priMode: false, pending: 0, q: 0, gen: 0, st: {}, poll: null };
+try { S.token = sessionStorage.getItem('k_htok') || ''; } catch (e) {}
+const num2 = id => String(id).slice(-2);
+
+function call(fn, args, ok, fail, quiet) {
+  let done = false;
+  if (!quiet) setPending(1);
+  const t = setTimeout(() => { if (done) return; done = true; if (!quiet) setPending(-1); (fail || toastErr)('응답이 너무 늦어요. ↻로 확인해 주세요.'); }, 30000);
+  const fin = cb => (...a) => { if (done) return; done = true; clearTimeout(t); if (!quiet) setPending(-1); cb(...a); };
+  google.script.run
+    .withSuccessHandler(fin(str => {
+      let r; try { r = JSON.parse(str); } catch (e) { return (fail || toastErr)('응답을 읽지 못했어요.'); }
+      if (r.success) return ok(r);
+      if (r.auth) return logout(r.message);
+      (fail || toastErr)(r.message);
+    }))
+    .withFailureHandler(fin(e => (fail || toastErr)('서버 오류: ' + (e && e.message || e))))[fn](...args);
+}
+function setPending(d) { S.pending += d; $('saving').style.display = S.pending > 0 ? 'block' : 'none'; }
+function toast(m, err) { const t = $('toast'); t.textContent = m; t.className = 'toast' + (err ? ' err' : ''); t.style.display = 'block'; clearTimeout(toast._t); toast._t = setTimeout(() => t.style.display = 'none', err ? 4000 : 1800); }
+const toastErr = m => toast(m, true);
+function modal(h) { $('modal').innerHTML = h; $('mbg').classList.add('on'); }
+function closeModal() { $('mbg').classList.remove('on'); $('modal').innerHTML = ''; }
+$('mbg').addEventListener('click', e => { if (e.target === $('mbg')) closeModal(); });
+
+function login() {
+  const id = $('sid').value.trim(), pw = $('pw').value; if (!id || !pw) return;
+  $('loginBtn').disabled = true; $('loginMsg').textContent = '확인 중…';
+  call('helperLogin', [id, pw], r => { S.token = r.token; try { sessionStorage.setItem('k_htok', r.token); } catch (e) {} $('pw').value = ''; $('loginBtn').disabled = false; load(); },
+    m => { $('loginBtn').disabled = false; $('loginMsg').textContent = m; }, true);
+}
+function logout(msg) {
+  S.token = ''; try { sessionStorage.removeItem('k_htok'); } catch (e) {}
+  clearInterval(S.poll); $('app').classList.add('hide'); $('login').classList.remove('hide'); $('loginMsg').textContent = msg || '';
+}
+function load(quiet) { call('helperGetDay', [S.token], r => setDay(r), quiet ? () => {} : toastErr, quiet); }
+function setDay(r) {
+  S.d = r;
+  $('login').classList.add('hide'); $('app').classList.remove('hide');
+  if (r.session && (!S.slot || !r.slots.some(s => s.col === S.slot))) S.slot = r.lastSlot || (r.slots[0] && r.slots[0].col) || 0;
+  clearInterval(S.poll);   // 수업 열리기 전엔 30초마다 확인, 수업 중엔 다른 기록(선생님) 반영용으로 60초마다
+  S.poll = setInterval(() => { if (!S.q && !S.pending && !$('mbg').classList.contains('on')) load(true); }, r.session ? 60000 : 30000);
+  render();
+}
+let QCHAIN = Promise.resolve();
+const keyOf = el => [el.dataset.a, el.dataset.id || '', el.dataset.pres || el.dataset.log || ''].join('|');
+function setSt(key, st) {
+  if (!key) return;
+  if (st) S.st[key] = st; else delete S.st[key];
+  paintSt();
+  if (st === 'ok' || st === 'err') setTimeout(() => { if (S.st[key] === st) setSt(key, ''); }, st === 'ok' ? 1500 : 3500);
+}
+function paintSt() { document.querySelectorAll('[data-a]').forEach(el => { const v = S.st[keyOf(el)]; if (v) el.setAttribute('data-st', v); else el.removeAttribute('data-st'); }); }
+/** 저장은 순서대로, 화면은 먼저 바꿈. 서버는 짧게 답하고, 손 멈추면 1.5초 뒤 서버 기준으로 맞춤 */
+function act(fn, args, after, key) {
+  S.q++; S.gen++; setSt(key, 'wait');
+  QCHAIN = QCHAIN.then(() => new Promise(res => {
+    call(fn, [S.token, ...args], r => { S.q--; setSt(key, 'ok'); if (r.msg) toast(r.msg + ' ✓'); after && after(r); render(); syncSoon(); res(); },
+      m => { S.q--; setSt(key, 'err'); toastErr(m); syncSoon(10); res(); });
+  }));
+}
+function syncSoon(ms) {
+  clearTimeout(syncSoon.t);
+  syncSoon.t = setTimeout(() => {
+    if (S.q) return syncSoon();
+    const gen = S.gen;
+    QCHAIN = QCHAIN.then(() => new Promise(res => call('helperGetDay', [S.token], r => { if (S.gen === gen && !S.q) setDay(r); res(); }, () => res(), true)));
+  }, ms == null ? 1500 : ms);
+}
+
+/* ── 화면 ── */
+const stuName = id => ((S.d.students || []).find(s => s.id === id) || {}).name || id;
+function render() {
+  const d = S.d;
+  $('hdr').textContent = `🎤 ${d.label} 수학부장 ${d.me.name}`;
+  if (!d.session) {
+    $('sub').textContent = '';
+    $('view').innerHTML = `<div class="card" style="text-align:center;padding:28px 14px"><b style="font-size:16px">${esc(d.why)}</b><p class="mute">${d.wait ? '열리면 자동으로 바뀌어요.' : ''}</p><button data-a="reload">↻ 다시 확인</button></div>`;
+    return;
+  }
+  const s = d.session, endAt = new Date(s.endMs).toTimeString().slice(0, 5);
+  $('sub').textContent = `${s.date.slice(5).replace('-', '/')} ${s.period}교시 · ${endAt}에 끝 · 하루 발표 ${d.limits.presDay}개 · 경청 발표당 ${d.limits.listenPres}명`;
+  $('view').innerHTML = S.listenFor ? vListen() : S.priMode ? vPriAdd() : vMain();
+  paintSt();
+}
+function vMain() {
+  const d = S.d, abs = new Set(d.absent || []), priNo = {};
+  d.priority.forEach(p => priNo[p.id] = p.no);
+  let h = `<div class="card"><h3>📘 발표 칸</h3><select id="slotSel">${d.slots.map(s => `<option value="${s.col}" ${s.col === S.slot ? 'selected' : ''}>${esc(s.unit)} · ${esc(s.type)}</option>`).join('')}</select></div>`;
+  h += `<div class="card"><div class="row"><h3 class="grow">⭐ 발표 우선권 명단 <span class="mute">순서대로 먼저 시켜요</span></h3><button class="pri" data-a="priMode">＋ 명단 추가</button></div>
+    ${d.priority.length ? `<ul class="plist">${d.priority.map((p, i) => `<li><span class="no">${p.no}</span><b class="grow">${num2(p.id)} ${esc(p.name)} <span class="mute">${esc(p.since)}</span></b>
+      <button data-a="priUp" data-id="${esc(p.id)}" ${i ? '' : 'disabled'}>▲</button><button data-a="priDown" data-id="${esc(p.id)}" ${i < d.priority.length - 1 ? '' : 'disabled'}>▼</button><button class="bad" data-a="priDel" data-id="${esc(p.id)}">✕</button></li>`).join('')}</ul>` : '<p class="mute" style="margin:0">지원했는데 문제가 모자라 못 한 친구를 순서대로 적어요. 발표하면 자동으로 빠져요.</p>'}</div>`;
+  h += `<div class="card"><h3>🙋 발표자 고르기 <span class="mute">⭐숫자 = 우선권 순서</span></h3><div class="sgrid">${d.students.map(st => {
+    const n = d.presToday[st.id] || 0, a = abs.has(st.id), pn = priNo[st.id];
+    return `<button class="sbtn ${pn === 1 ? 'pri1' : ''} ${a ? 'abs' : ''}" data-a="presPick" data-id="${esc(st.id)}" ${a || n >= d.limits.presDay ? 'disabled' : ''}>${num2(st.id)} ${esc(st.name)}<small>${a ? '결석' : '오늘 ' + n + '/' + d.limits.presDay}</small>${pn ? `<span class="pno">⭐${pn}</span>` : ''}${n ? `<span class="cnt">${n}</span>` : ''}</button>`;
+  }).join('')}</div></div>`;
+  h += `<div class="card"><h3>이번 수업 발표 ${d.pres.length}건</h3>${d.pres.slice().reverse().map(p => `
+    <div class="pcard ${p.presId ? '' : 'wait'}"><div class="row"><b class="grow">${esc(p.name)} · ${esc(p.problem)}</b><span class="mute">${esc(p.unit)}</span></div>
+      <div class="chips" style="margin:6px 0">${p.listeners.map(l => `<button class="chip" data-a="unlisten" data-log="${esc(l.logId)}" ${l.mine && l.logId ? '' : 'disabled'}>${esc(l.name)} +1${l.mine ? ' ✕' : ''}</button>`).join('') || '<span class="mute">경청 선물 아직 없음</span>'}</div>
+      <div class="row"><button class="pri grow" data-a="listenMode" data-pres="${esc(p.presId)}" ${p.presId && p.listeners.length < d.limits.listenPres ? '' : 'disabled'}>＋ 퀴즈 맞힌 친구 (${p.listeners.length}/${d.limits.listenPres})</button>
+      ${p.mine ? `<button class="bad" data-a="unpresent" data-pres="${esc(p.presId)}" ${p.presId ? '' : 'disabled'}>취소</button>` : ''}</div>
+    </div>`).join('') || '<span class="mute">아직 없음</span>'}</div>`;
+  return h;
+}
+function vListen() {
+  const d = S.d, p = d.pres.find(x => x.presId === S.listenFor);
+  if (!p) { S.listenFor = ''; return vMain(); }
+  const abs = new Set(d.absent || []), got = new Set(p.listeners.map(l => l.id)), room = d.limits.listenPres - p.listeners.length, sel = S.listenSel;
+  return `<div class="card"><h3>퀴즈 맞힌 친구 <span class="mute">최대 ${d.limits.listenPres}명 · 골라서 한 번에 +1</span></h3><div class="pcard on"><b>${esc(p.name)}</b> ${esc(p.problem)}</div>
+    <div class="sgrid">${d.students.map(st => {
+      const n = d.listenHere[st.id] || 0, mine = st.id === p.id, has = got.has(st.id), on = sel.includes(st.id);
+      const dis = mine || abs.has(st.id) || has || (!on && (n >= d.limits.listen || sel.length >= room));
+      return `<button class="sbtn ${has || on ? 'hl' : ''} ${abs.has(st.id) ? 'abs' : ''}" data-a="listenTog" data-id="${esc(st.id)}" ${dis ? 'disabled' : ''}>${on ? '☑ ' : ''}${num2(st.id)} ${esc(st.name)}<small>${mine ? '발표자' : has ? '✓ 받음' : n + '/' + d.limits.listen}</small></button>`;
+    }).join('')}</div>
+    <div class="row" style="margin-top:10px"><button class="grow" data-a="listenClose">나중에</button>
+      <button class="pri grow" data-a="listenGo" style="padding:12px" ${sel.length ? '' : 'disabled'}>${sel.length ? sel.map(stuName).map(esc).join(', ') + ' +1 저장' : room + '명까지 고르기'}</button></div></div>`;
+}
+function vPriAdd() {
+  const d = S.d, priNo = {}; d.priority.forEach(p => priNo[p.id] = p.no);
+  return `<div class="card"><h3>⭐ 우선권 명단 추가 <span class="mute">누르는 순서대로 뒤에 붙어요</span></h3>
+    <div class="sgrid">${d.students.map(st => { const pn = priNo[st.id];
+      return `<button class="sbtn ${pn ? 'hl' : ''}" data-a="priAdd" data-id="${esc(st.id)}" ${pn ? 'disabled' : ''}>${num2(st.id)} ${esc(st.name)}<small>${pn ? pn + '번' : '&nbsp;'}</small>${pn ? `<span class="pno">⭐${pn}</span>` : ''}</button>`; }).join('')}</div>
+    <button class="pri" data-a="priDone" style="width:100%;margin-top:10px;padding:12px">완료</button></div>`;
+}
+
+/* ── 동작 ── */
+function onAction(a, el) {
+  const d = S.d, id = el.dataset.id;
+  switch (a) {
+    case 'reload': load(); break;
+    case 'presPick': {
+      const n = d.presToday[id] || 0;
+      modal(`<h3>${esc(stuName(id))} 발표 <span class="mute">오늘 ${n}/${d.limits.presDay}</span></h3>
+        <div class="mute">${esc((d.slots.find(s => s.col === S.slot) || {}).unit || '')} 칸 · 문제 1개 ('번'은 자동)</div>
+        <input id="mProb" placeholder="예: 12  또는  3(2)" style="margin:8px 0">
+        <button class="pri" data-a="presGo" data-id="${esc(id)}" style="width:100%;padding:12px">발표 등록</button>`);
+      setTimeout(() => $('mProb') && $('mProb').focus(), 50); break;
+    }
+    case 'presGo': {
+      const v = $('mProb').value.trim(); if (!v) return toastErr('문제 번호를 적어 주세요.');
+      closeModal();
+      d.presToday[id] = (d.presToday[id] || 0) + 1;
+      const tmp = { presId: '', id, name: stuName(id), problem: /번$/.test(v) ? v : v + '번', unit: '', listeners: [], mine: true };
+      d.pres.push(tmp);
+      d.priority = d.priority.filter(p => p.id !== id).map((p, i) => Object.assign({}, p, { no: i + 1 }));
+      render();
+      act('helperPresent', [id, S.slot, v], r => {   // 등록되면 바로 '맞힌 친구' 고르기
+        tmp.presId = r.presId;
+        if (!S.listenFor && !S.priMode) { S.listenFor = r.presId; S.listenSel = []; window.scrollTo(0, 0); }
+      }, `presPick|${id}|`); break;
+    }
+    case 'unpresent': modal(`<h3>발표를 취소할까요?</h3><div class="row"><button class="grow" data-a="close">닫기</button><button class="bad grow" data-a="unpresentGo" data-pres="${esc(el.dataset.pres)}">발표 취소</button></div>`); break;
+    case 'unpresentGo': { closeModal(); const pid = el.dataset.pres, p = d.pres.find(x => x.presId === pid); if (p) { d.pres = d.pres.filter(x => x !== p); d.presToday[p.id] = Math.max(0, (d.presToday[p.id] || 1) - 1); render(); } act('helperUnpresent', [pid]); break; }
+    case 'listenMode': S.listenFor = el.dataset.pres; S.listenSel = []; render(); window.scrollTo(0, 0); break;
+    case 'listenClose': S.listenFor = ''; S.listenSel = []; render(); break;
+    case 'listenTog': { const i = S.listenSel.indexOf(id); if (i >= 0) S.listenSel.splice(i, 1); else S.listenSel.push(id); render(); break; }
+    case 'listenGo': {
+      const p = d.pres.find(x => x.presId === S.listenFor), ids = S.listenSel.slice();
+      if (!p || !ids.length) break;
+      ids.forEach(i => { p.listeners.push({ logId: '', id: i, name: stuName(i), mine: true }); d.listenHere[i] = (d.listenHere[i] || 0) + 1; });
+      act('helperListen', [p.presId, ids], r => (r.logs || []).forEach(x => { const l = p.listeners.find(y => y.id === x.id && !y.logId); if (l) l.logId = x.logId; }), `listenMode||${p.presId}`);
+      S.listenFor = ''; S.listenSel = []; render(); break;
+    }
+    case 'unlisten': { const lg = el.dataset.log; if (!lg) break; d.pres.forEach(p => { const i = p.listeners.findIndex(l => l.logId === lg); if (i >= 0) { d.listenHere[p.listeners[i].id]--; p.listeners.splice(i, 1); } }); render(); act('helperUnlisten', [lg]); break; }
+    case 'priMode': S.priMode = true; render(); window.scrollTo(0, 0); break;
+    case 'priDone': S.priMode = false; render(); break;
+    case 'priAdd': d.priority.push({ no: d.priority.length + 1, id, name: stuName(id), since: '' }); render(); act('helperPriority', [id, 'add'], r => { if (r.priority) S.d.priority = r.priority; }, `priAdd|${id}|`); break;
+    case 'priUp': case 'priDown': {
+      const i = d.priority.findIndex(p => p.id === id), j = a === 'priUp' ? i - 1 : i + 1;
+      if (i < 0 || j < 0 || j >= d.priority.length) break;
+      [d.priority[i], d.priority[j]] = [d.priority[j], d.priority[i]]; d.priority.forEach((p, k) => p.no = k + 1); render();
+      act('helperPriority', [id, a === 'priUp' ? 'up' : 'down'], r => { if (r.priority) S.d.priority = r.priority; }, `${a}|${id}|`); break;
+    }
+    case 'priDel': d.priority = d.priority.filter(p => p.id !== id).map((p, k) => Object.assign({}, p, { no: k + 1 })); render(); act('helperPriority', [id, 'remove'], r => { if (r.priority) S.d.priority = r.priority; }); break;
+    case 'close': closeModal(); break;
+  }
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-a]');
+  if (!b || b.tagName === 'SELECT' || b.disabled) return;
+  if (b.getAttribute('data-st') === 'wait') return toast('저장 중이에요. 잠깐만요.');
+  onAction(b.dataset.a, b);
+});
+document.addEventListener('change', e => { if (e.target.id === 'slotSel') S.slot = Number(e.target.value); });
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  if (e.target.id === 'pw' || e.target.id === 'sid') login();
+  if (e.target.id === 'mProb') { const b = document.querySelector('[data-a="presGo"]'); b && b.click(); }
+});
+$('loginBtn').onclick = login;
+$('reload').onclick = () => load();
+$('out').onclick = e => { e.preventDefault(); logout('나갔어요.'); };
+if (S.token) load(true);
+}
+</script>
+</body>
+</html>
