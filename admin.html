@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ko">
 <head>
 
@@ -48,7 +48,23 @@ body { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-ins
   .b-hold { background: #dcfce7; color: #166534; } .b-cancel { background: #fee2e2; color: #b91c1c; } .b-unk { background: #fef3c7; color: #92400e; } .b-gray { background: #f1f5f9; color: #64748b; }
   .alert { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; border-radius: 10px; padding: 9px 11px; font-size: 13px; margin-top: 6px; }
   .alert.red { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
-  .tabs { position: fixed; left: 0; right: 0; bottom: 0; background: #fff; border-top: 1px solid var(--line); display: grid; grid-template-columns: repeat(6, 1fr); z-index: 30; padding-bottom: env(safe-area-inset-bottom); }
+  .tabs { position: fixed; left: 0; right: 0; bottom: 0; background: #fff; border-top: 1px solid var(--line); display: grid; grid-template-columns: repeat(5, 1fr); z-index: 30; padding-bottom: env(safe-area-inset-bottom); }
+  /* 오늘 수업: 모드 머리 카드 */
+  .modecard { border-left: 6px solid var(--mute); }
+  .modecard.m-수업 { border-left-color: #64748b; } .modecard.m-발표 { border-left-color: #7c3aed; background: #faf5ff; } .modecard.m-검사 { border-left-color: var(--ok); background: #f0fdf4; }
+  .modecard h2 { font-size: 20px; margin: 2px 0 4px; }
+  .steps { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }
+  .steps span { font-size: 12px; padding: 3px 9px; border-radius: 12px; background: #e2e8f0; color: #475569; font-weight: 700; }
+  .steps span.done { background: #dcfce7; color: #166534; } .steps span.now { background: var(--ac); color: #fff; }
+  .bigbtn { width: 100%; padding: 14px; font-size: 16px; }
+  .nextp { border: 2px solid #7c3aed; background: #faf5ff; border-radius: 14px; padding: 14px; text-align: center; margin-bottom: 8px; }
+  .nextp b { display: block; font-size: 22px; margin: 4px 0 10px; }
+  .qlist { list-style: none; padding: 0; margin: 0; }
+  .qlist li { display: flex; align-items: center; gap: 6px; padding: 7px 0; border-bottom: 1px dashed var(--line); }
+  .qlist li .no { width: 26px; height: 26px; border-radius: 50%; background: #ede9fe; color: #5b21b6; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; flex: none; }
+  .qlist li.first .no { background: #7c3aed; color: #fff; }
+  .qlist li button { padding: 6px 9px; }
+  .seg { display: flex; gap: 6px; } .seg button { flex: 1; } .seg button.on { background: var(--ac); color: #fff; }
   .tabs button { background: none; border-radius: 0; padding: 9px 2px 8px; font-size: 12px; color: var(--mute); }
   .tabs button b { display: block; font-size: 18px; }
   .tabs button.on { color: var(--ac); }
@@ -125,15 +141,14 @@ body { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-ins
     </div>
     <div id="topAlert"></div>
     <div id="view"></div>
-    <div class="foot"><a href="admin.html" target="_top">새로고침</a> · 화면 v14</div>
+    <div class="foot"><a href="admin.html" target="_top">새로고침</a> · 화면 v15</div>
   </div>
 </div>
 
 <div class="tabs hide" id="tabs">
-  <button data-tab="class"><b>📋</b>출첵</button>
-  <button data-tab="hw"><b>✅</b>숙제</button>
-  <button data-tab="pres"><b>🎤</b>발표</button>
+  <button data-tab="today"><b>📋</b>오늘 수업</button>
   <button data-tab="toilet"><b>🚻</b>화장실</button>
+  <button data-tab="class"><b>📅</b>수업 관리</button>
   <button data-tab="stu"><b>👤</b>학생</button>
   <button data-tab="set"><b>⚙️</b>설정</button>
 </div>
@@ -258,9 +273,12 @@ function setDay(r) {
   if (!s || s.checked || !S.att || S.att.sid !== s.id) S.att = s ? { sid: s.id, abs: Object.assign({}, s.abs || {}) } : null;
   if (s && s.id !== S.lastSid) {   // 새 수업을 열었는데 오늘 출첵 전이면 출첵 화면부터
     S.lastSid = s.id;
-    if (s.date === todayStr() && s.open && !s.checked && ['hw', 'pres', 'toilet'].includes(S.tab)) S.tab = 'class';
+    if (S.tab !== 'stu' && S.tab !== 'set') S.tab = 'today';
+    S.showAtt = false; S.sigMode = false; S.listenFor = ''; S.bonusMode = false;
   }
-  if (!S.slot || !r.slots.some(s => s.col === S.slot)) S.slot = r.lastSlot || (r.slots[0] && r.slots[0].col) || 0;
+  const f = r.flow;   // 발표 수업이면 발표 칸을 그 단원 칸으로
+  if (f && f.round && f.round.slots.length && !f.round.slots.some(x => x.col === S.slot)) S.slot = f.round.slots[0].col;
+  if (!S.slot || !r.slots.some(s => s.col === S.slot)) S.slot = (f && f.round && f.round.slots[0] && f.round.slots[0].col) || r.lastSlot || (r.slots[0] && r.slots[0].col) || 0;
   renderTop(); render();
 }
 /* 저장은 순서대로 한 줄 세워 보내고, 화면은 누르자마자 먼저 바꿔 둠.
@@ -446,8 +464,9 @@ function resumePend() {
 
 /* ── 상단: 수업 선택 ── */
 function sesLabel(s) {
-  const st = s.cancelled ? '휴강' : s.checked ? '✅출첵' : s.past ? '미출첵' : '';
-  return `${md(s.date)} ${s.period}교시${st ? ' · ' + st : ''}${s.reason ? ' · ' + s.reason : ''}`;
+  const st = s.cancelled ? '휴강' : s.checked ? '✅' : s.past && !(S.day && S.day.limits.testMode) ? '미출첵' : '';
+  const m = S.day && S.day.modes && S.day.modes[s.id], mi = m === '발표' ? '🎤발표' : m === '검사' ? '✅검사' : '';
+  return `${md(s.date)} ${s.period}교시${mi ? ' · ' + mi : ''}${st ? ' · ' + st : ''}${s.reason ? ' · ' + s.reason : ''}`;
 }
 function renderTop() {
   const d = S.day;
@@ -457,11 +476,11 @@ function renderTop() {
     opts.map(s => `<option value="${esc(s.id)}" ${d.session && s.id === d.session.id ? 'selected' : ''}>${esc(sesLabel(s))}</option>`).join('');
   let h = '';
   const s = d.session;
-  if (s && s.date === todayStr() && s.open && !s.checked) h += `<div class="alert red">📋 <b>출석체크 전</b> — 출첵해야 오늘 수업으로 치고, 숙제 검사·발표·화장실 기록이 돼요. <button class="ghost" data-a="gotoAtt">출첵하기</button></div>`;
+  const tm = d.limits.testMode;
   if (s && s.cancelled) h += `<div class="alert">휴강으로 표시돼 있어요 (${esc(s.reason || '')}). 참고용이라, 실제로 수업했으면 출석체크하면 수업으로 바뀌어요.</div>`;
-  if (d.unconfirmed.length) h += `<div class="alert">출첵 안 한 지난 수업 ${d.unconfirmed.length}개 → <b>수업 안 한 걸로</b> 쳐요. 실제로 수업했으면 출첵해 주세요. <button class="ghost" data-a="showUnconf">보기</button></div>`;
-  if (d.session && d.session.date !== todayStr()) h += `<div class="alert">오늘 수업이 아니에요. 검사·발표·화장실 기록은 오늘 수업에서만 돼요. (지난 기록 수정은 👤학생)</div>`;
-  if (d.limits.testMode) h += `<div class="alert">🧪 테스트반 — 시간 제한 없음. 위 선택칸에서 오늘 아무 교시나 골라 출첵하면 그 교시 수업으로 쳐요. (교시 순서대로 해야 지연 차시가 맞아요)</div>`;
+  if (!tm && d.unconfirmed.length) h += `<div class="alert">출첵 안 한 지난 수업 ${d.unconfirmed.length}개 → <b>수업 안 한 걸로</b> 쳐요. 실제로 수업했으면 출첵해 주세요. <button class="ghost" data-a="showUnconf">보기</button></div>`;
+  if (!tm && d.session && d.session.date !== todayStr()) h += `<div class="alert">오늘 수업이 아니에요. 검사·발표·화장실 기록은 오늘 수업에서만 돼요. (지난 기록 수정은 👤학생)</div>`;
+  if (tm) h += `<div class="alert" style="padding:6px 10px">🧪 테스트반 — 날짜 상관없이 진행 가능. 아래 [▶ 다음 수업으로]로 수업을 하나씩 넘기며 흐름을 시험해요.</div>`;
   if (d.warnings.length) h += `<div class="alert">시트 확인: ${d.warnings.map(esc).join(' / ')}</div>`;
   $('topAlert').innerHTML = h;
 }
@@ -477,8 +496,13 @@ function gate() {
 function render() {
   document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === S.tab));
   try { sessionStorage.setItem('k_tab', S.tab); } catch (e) {}
-  const f = { class: vClass, hw: vHw, pres: vPres, toilet: vToilet, stu: vStu, set: vSet }[S.tab];
+  if (!['today', 'toilet', 'class', 'stu', 'set'].includes(S.tab)) S.tab = 'today';
+  const f = { today: vToday, class: vClass, toilet: vToilet, stu: vStu, set: vSet }[S.tab];
+  const keep = {}, fo = document.activeElement && document.activeElement.id;   // 입력 중이던 글자는 다시 그려도 그대로
+  ['fProg', 'fNotice', 'bWhy', 'mProb'].forEach(k => { const e = $(k); if (e && e.dataset.dirty) keep[k] = e.value; });
   $('view').innerHTML = f ? f() : '';
+  Object.keys(keep).forEach(k => { const e = $(k); if (e) { e.value = keep[k]; e.dataset.dirty = 1; } });
+  if (fo && $(fo) && keep[fo] != null) $(fo).focus();
   paintSt();
 }
 const stuName = id => (S.day.students.find(s => s.id === id) || {}).name || id;
@@ -618,6 +642,160 @@ function vPres() {
   return h;
 }
 
+/* ════════════ 📋 오늘 수업 — 앱이 '오늘이 무슨 날인지' 정해서 그날 할 일만 보여 줌 ════════════
+   일반 수업: 출첵 → 진도 → (단원 끝나면) [단원 끝] + 발표 신청 줄
+   발표 수업: 출첵 → (지연 검사) → 신청 순서대로 발표 → 포인트 받을 친구 → [발표 끝]
+   검사 수업: 출첵하면 그 단원 숙제 정시 검사가 자동 시작 → 표에서 체크 */
+const presOf = k => (S.day.pres || []).find(x => (x.presId && x.presId === k) || x.tid === k);
+function sendListen(p, ids) {
+  act('listen', [S.cls, S.sid, p.presId, ids], r => (r.logs || []).forEach(x => { const l = p.listeners.find(y => y.id === x.id && !y.logId); if (l) l.logId = x.logId; }), `listenMode|||${p.presId}`);
+}
+function modeTitle(f) {
+  if (!f) return '';
+  if (f.mode === '발표') return `🎤 ${esc(f.round ? f.round.name : '')} 발표 <span class="mute">${f.presN}차시</span>`;
+  if (f.mode === '검사') return `✅ ${esc(f.round ? f.round.name : '')} 숙제 검사`;
+  return '📖 수업';
+}
+function modeHint(f) {
+  if (f.mode === '발표') return `신청 순서대로 발표 → 포인트 받을 친구 (한 친구 이 수업 최대 ${S.day.limits.listen}점) · 발표는 이 단원 한 사람 ${S.day.limits.presUnit}번까지`;
+  if (f.mode === '검사') return `출첵하면 ${esc(f.round ? f.round.tasks.map(t => t.name).join('·') : '')} 정시 검사가 자동으로 시작돼요. 오늘 못 낸 학생은 다음 수업부터 지연.`;
+  return '진도 적고, 단원이 끝나면 [단원 끝] → 다음 시간이 발표';
+}
+const nextLabel = n => n ? `${md(n.date)} ${n.period}교시 · ${n.mode === '발표' ? '🎤 발표' : n.mode === '검사' ? '✅ 숙제 검사' : '📖 수업'}` : '';
+function vToday() {
+  const d = S.day, s = d.session, f = d.flow;
+  if (!s) return `<div class="card"><h3>${esc(d.label)} 수업이 없어요</h3><p class="mute">시간표에 없는 날 수업하면 📅수업 관리 → 수업 추가.</p></div>`;
+  const live = s.checked && (isToday() || d.limits.testMode);
+  let h = `<div class="card modecard m-${f.mode}"><div class="mute">${esc(d.label)} · ${md(s.date)} ${s.period}교시${s.checked ? ' · 출첵 ' + esc(s.checkedAt) : ''}</div>
+    <h2>${modeTitle(f)}</h2><div class="mute">${modeHint(f)}</div>
+    <div class="steps"><span class="${s.checked ? 'done' : 'now'}">① 출첵${s.checked ? ' ✓' : ''}</span>${f.mode === '발표' ? `<span class="${live ? 'now' : ''}">② 발표·포인트</span><span class="${f.presEnd ? 'done' : ''}">③ 발표 끝?</span>` : f.mode === '검사' ? `<span class="${live ? 'now' : ''}">② 숙제 체크</span>` : `<span class="${live ? 'now' : ''}">② 진도</span><span class="${f.unitEnd >= 0 ? 'done' : ''}">③ 단원 끝?</span>`}</div></div>`;
+  if (!s.checked || S.showAtt) {
+    h += vAtt();
+    if (!s.checked) return h + nextCard();
+  } else {
+    const ab = Object.keys(s.abs || {});
+    h += `<div class="card" style="padding:10px 14px"><div class="row"><span class="grow">✅ 출석 <b>${d.students.length - ab.length}</b>${ab.length ? ` · 결석 ${ab.map(stuName).map(esc).join(', ')}` : ''}</span><button class="ghost" data-a="attEdit">출결 수정</button></div></div>`;
+  }
+  if (!live) return h + `<div class="card mute">오늘 수업이 아니라서 기록은 안 돼요. (지난 기록 수정은 👤학생)</div>` + nextCard();
+  // 숙제: 검사 날은 메인, 그 밖의 날은 '지연 검사 먼저' (마감 전까지 남은 학생)
+  const cols = d.gridCols.map(c => d.tasks.find(t => t.col === c)).filter(Boolean);
+  if (f.mode === '검사') h += cols.length ? hwCard('✅ 숙제 검사', cols, false) : `<div class="card mute">검사할 과제를 준비 중이에요… (출첵 저장이 끝나면 나타나요)</div>`;
+  else if (cols.length) h += hwCard('⏰ 지연 검사 먼저', cols, true);
+  if (f.mode === '발표') h += presCard();
+  h += lessonCard();
+  h += `<div class="row" style="margin:4px 0 10px"><button class="grow" data-a="gotoTab" data-v="toilet">🚻 화장실</button><button class="grow" data-a="bonusOpen">⭐ 특별 보너스</button></div>`;
+  if (S.bonusMode) h += bonusCard();
+  return h + nextCard();
+}
+/** 🧪 테스트반: 다음 수업으로 바로 (흐름 시험용) */
+function nextCard() {
+  const n = S.day.flow && S.day.flow.next;
+  if (!n) return '';
+  return `<div class="card" style="text-align:center"><div class="mute">다음 수업 ${S.day.limits.testMode ? '(🧪 테스트반은 미리 진행 가능)' : ''}</div><b>${esc(nextLabel(n))}</b>
+    ${S.day.limits.testMode ? `<button class="pri bigbtn" data-a="gotoSes" data-sid="${esc(n.id)}" style="margin-top:8px">▶ 다음 수업으로</button>` : ''}</div>`;
+}
+/** 숙제 체크 표 (late = 지연 검사 모드: 아직 안 낸 학생만) */
+function hwCard(title, cols, late) {
+  const d = S.day;
+  const rows = d.grid.filter(g => !late || cols.some(t => { const c = g.cells[t.col] || {}; return !c.done || c.here; }));
+  if (late && !rows.length) return '';
+  const multi = cols.length >= 2;
+  let h = `<div class="card"><h3>${title} <span class="mute">${late ? '마감 전까지 남은 학생 · 다음 검사 날이 마지막 기회' : '누르면 체크 · 다시 누르면 취소'}</span></h3><div class="chkwrap"><table class="chk"><thead><tr><th style="text-align:left">학생</th>${cols.map(t => `<th>${esc(t.name)}<br><span class="mute">${t.startedHere ? '오늘 정시' : esc(t.startedLabel) + ' 정시'}${t.deadline ? '<br>마감 ' + esc(t.deadline) : ''}</span></th>`).join('')}</tr></thead><tbody>`;
+  rows.forEach(g => {
+    const todo = cols.filter(t => { const c = g.cells[t.col] || {}; return !c.done && !c.wait && !c.err && !g.absent; });
+    const allBtn = multi && todo.length >= 2 ? `<button class="allbtn" data-a="checkAll" data-id="${esc(g.id)}" data-cols="${todo.map(t => t.col).join(',')}">${todo.length}개 모두 ✓</button>` : '';
+    h += `<tr><td class="nm">${num2(g.id)} ${esc(g.name)}${allBtn}</td>` + cols.map(t => {
+      const c = g.cells[t.col] || {};
+      if (c.done) return `<td><button class="cell done ${c.late ? 'late' : ''} ${c.wait ? 'wait' : ''}" data-a="undo" data-id="${esc(g.id)}" data-col="${t.col}">✓${c.late ? `<small>${c.late}차 ${c.pen}</small>` : '<small>정시</small>'}</button></td>`;
+      if (g.absent) return `<td><button class="cell abs" disabled>${esc(g.absent)}결</button></td>`;
+      if (c.err) return `<td><span class="mute">!</span></td>`;
+      if (c.wait) return `<td><button class="cell todo wait" disabled>…</button></td>`;
+      return `<td><button class="cell todo ${c.level ? 'late' : ''}" data-a="check" data-id="${esc(g.id)}" data-col="${t.col}">${c.level ? c.level + '차 ' + c.pen : '정시'}</button></td>`;
+    }).join('') + '</tr>';
+  });
+  return h + `</tbody></table></div></div>`;
+}
+/** 진도 + [단원 끝] + 발표 신청 줄 */
+function lessonCard() {
+  const d = S.day, s = d.session, f = d.flow;
+  let h = `<div class="card"><h3>📝 진도 <span class="mute">학생 화면에 보임</span></h3>
+    <div class="row"><input id="fProg" class="grow" placeholder="예: 미분계수 p.52~55" value="${esc(s.progress)}"><button class="pri" data-a="saveNotes">저장</button></div>
+    <details style="margin-top:6px"><summary class="mute">공지 ${s.notice ? '✓' : ''}</summary><textarea id="fNotice" placeholder="예: 다음 시간 교과서 검사">${esc(s.notice)}</textarea></details>`;
+  if (f.mode !== '발표') {
+    if (f.unitEnd >= 0 && f.endedUnit) h += `<div class="alert" style="background:#faf5ff;border-color:#ddd6fe;color:#5b21b6;margin-top:10px">✅ <b>${esc(f.endedUnit.name)}</b> 단원 끝 → 다음 수업부터 발표${f.endedUnit.slots.length > 1 ? ' (중·대단원 이어서)' : ''} <button class="ghost" data-a="unitEnd" data-v="0">취소</button></div>`;
+    else if (f.nextUnit) h += `<button class="bigbtn" data-a="unitEnd" data-v="1" style="margin-top:10px;background:#ede9fe;color:#5b21b6">📘 오늘 <b>${esc(f.nextUnit.name)}</b> 단원 끝${f.nextUnit.slots.length > 1 ? ' (중·대단원)' : ''} → 다음 시간 발표</button>`;
+  }
+  h += '</div>';
+  if (f.sigRound && f.mode !== '발표') h += signupCard(`🙋 ${esc(f.sigRound.name)} 발표 신청 받기`, '수학부장이 교탁 앞에서 선착순으로 · 두 번 하려면 줄을 한 번 더');
+  return h;
+}
+/** 발표 신청 줄 (보기 + 추가 모드) */
+function signupCard(title, hint) {
+  const d = S.day, lim = d.limits.presUnit || 2, cnt = {};
+  (d.signup || []).forEach(x => cnt[x.id] = (cnt[x.id] || 0) + 1);
+  const abs = d.session.abs || {};
+  let h = `<div class="card"><div class="row"><h3 class="grow">${title} <span class="mute">${(d.signup || []).length}명</span></h3><button class="${S.sigMode ? 'pri' : ''}" data-a="sigMode">${S.sigMode ? '완료' : '＋ 받기'}</button></div>`;
+  if (S.sigMode) {
+    h += `<p class="mute" style="margin:0 0 6px">${hint} · 누르는 순서대로 줄 뒤에 붙어요</p><div class="sgrid">${d.students.map(st => {
+      const n = (cnt[st.id] || 0) + ((d.presRound || {})[st.id] || 0), full = n >= lim;
+      return `<button class="sbtn ${cnt[st.id] ? 'hl' : ''} ${abs[st.id] ? 'abs' : ''}" data-a="sigAdd" data-id="${esc(st.id)}" ${full || abs[st.id] ? 'disabled' : ''}>${num2(st.id)} ${esc(st.name)}<small>${abs[st.id] ? '결석' : n + '/' + lim}</small>${cnt[st.id] ? `<span class="cnt blue">${cnt[st.id]}</span>` : ''}</button>`;
+    }).join('')}</div>`;
+  }
+  h += (d.signup || []).length ? `<ul class="qlist" style="margin-top:8px">${d.signup.map((x, i) => `<li class="${i ? '' : 'first'}"><span class="no">${x.no}</span><b class="grow">${num2(x.id)} ${esc(x.name)}</b>
+      <button data-a="sigUp" data-key="${esc(x.key)}" ${i ? '' : 'disabled'}>▲</button><button data-a="sigDown" data-key="${esc(x.key)}" ${i < d.signup.length - 1 ? '' : 'disabled'}>▼</button><button class="bad" data-a="sigDel" data-key="${esc(x.key)}">✕</button></li>`).join('')}</ul>` : (S.sigMode ? '' : '<p class="mute" style="margin:6px 0 0">아직 신청 없음</p>');
+  return h + '</div>';
+}
+/** 발표 수업: 다음 발표자 → 기록 → 포인트 받을 친구 → … → [발표 끝] */
+function presCard() {
+  const d = S.day, f = d.flow, lim = d.limits, abs = d.session.abs || {};
+  let h = '';
+  if (S.listenFor) {
+    const p = presOf(S.listenFor);
+    if (p) {
+      const got = new Set(p.listeners.map(l => l.id)), room = lim.listenPres - p.listeners.length, sel = S.listenSel;
+      return `<div class="card" style="border:2px solid #7c3aed"><h3>🎁 ${esc(p.name)}이(가) 포인트 줄 친구 <span class="mute">최대 ${lim.listenPres}명 · 한 친구 이 수업 ${lim.listen}점까지</span></h3>
+        <div class="pcard on"><b>${esc(p.name)}</b> ${esc(p.problem)} <span class="mute">${esc(p.unit)}</span></div>
+        <div class="sgrid">${d.students.map(st => {
+          const n = d.listenHere[st.id] || 0, mine = st.id === p.id, has = got.has(st.id), on = sel.includes(st.id);
+          const dis = mine || abs[st.id] || has || (!on && (n >= lim.listen || sel.length >= room));
+          return `<button class="sbtn ${has || on ? 'hl' : ''} ${abs[st.id] ? 'abs' : ''}" data-a="listenTog" data-id="${esc(st.id)}" ${dis ? 'disabled' : ''}>${on ? '☑ ' : ''}${num2(st.id)} ${esc(st.name)}<small>${mine ? '발표자' : has ? '✓ 받음' : n + '/' + lim.listen}</small></button>`;
+        }).join('')}</div>
+        <div class="row" style="margin-top:10px"><button class="grow" data-a="listenDone">건너뛰기</button>
+          <button class="pri grow" data-a="listenGo" style="padding:12px" ${sel.length ? '' : 'disabled'}>${sel.length ? `${sel.map(stuName).map(esc).join(', ')} +1` : '친구 고르기'}</button></div></div>`;
+    }
+    S.listenFor = '';
+  }
+  // 발표 칸 (중·대단원 둘이면 고르기)
+  if (f.round && f.round.slots.length > 1) h += `<div class="seg" style="margin-bottom:8px">${f.round.slots.map(x => `<button class="${x.col === S.slot ? 'on' : ''}" data-a="slotPick" data-col="${x.col}">${esc(x.type)}</button>`).join('')}</div>`;
+  const q = d.signup || [], first = q[0];
+  if (first) h += `<div class="nextp"><div class="mute">다음 발표자 (신청 1번)</div><b>${num2(first.id)} ${esc(first.name)}</b><button class="pri bigbtn" data-a="presPick" data-id="${esc(first.id)}" ${abs[first.id] ? 'disabled' : ''}>🎤 발표 기록</button></div>`;
+  else h += `<div class="card mute" style="text-align:center">신청 줄이 비었어요. 남은 문제가 있으면 아래에서 신청을 더 받거나 [줄에 없는 학생]으로 기록해요.</div>`;
+  h += signupCard('🙋 발표 신청 줄', '줄 서는 순서대로');
+  h += `<div class="card"><div class="row"><h3 class="grow">줄에 없는 학생 발표</h3><button data-a="presOther">${S.presOther ? '닫기' : '열기'}</button></div>${S.presOther ? `<div class="sgrid" style="margin-top:8px">${d.students.map(st => {
+    const n = (d.presRound || {})[st.id] || 0;
+    return `<button class="sbtn ${abs[st.id] ? 'abs' : ''}" data-a="presPick" data-id="${esc(st.id)}" ${abs[st.id] || n >= lim.presUnit ? 'disabled' : ''}>${num2(st.id)} ${esc(st.name)}<small>${abs[st.id] ? '결석' : '이 단원 ' + n + '/' + lim.presUnit}</small></button>`; }).join('')}</div>` : ''}</div>`;
+  h += `<div class="card"><h3>이번 수업 발표 ${d.pres.length}건</h3>${d.pres.slice().reverse().map(p => `
+    <div class="pcard"><div class="row"><b class="grow">${esc(p.name)} · ${esc(p.problem)}</b><span class="mute">${esc(p.unit)}${p.by && p.by !== '교사' ? ' · 부장' : ''}</span></div>
+      <div class="chips" style="margin:6px 0">${p.listeners.map(l => `<button class="chip" data-a="unlisten" data-log="${esc(l.logId)}">${esc(l.name)} +1 ✕</button>`).join('') || '<span class="mute">포인트 준 친구 없음</span>'}</div>
+      <div class="row"><button class="grow" data-a="listenMode" data-pres="${esc(p.presId || p.tid)}" ${p.listeners.length >= lim.listenPres ? 'disabled' : ''}>＋ 포인트 친구 (${p.listeners.length}/${lim.listenPres})</button><button class="bad" data-a="unpresent" data-pres="${esc(p.presId)}" ${p.presId ? '' : 'disabled'}>발표 취소</button></div>
+    </div>`).join('') || '<span class="mute">아직 없음</span>'}</div>`;
+  h += f.presEnd
+    ? `<div class="card" style="background:#f0fdf4"><b>🏁 발표 끝</b> → 다음 수업은 <b>숙제 검사</b> <button class="ghost" data-a="presEnd" data-v="0">취소 (다음 시간도 발표)</button></div>`
+    : `<button class="bigbtn" data-a="presEnd" data-v="1" style="background:#dcfce7;color:#166534;margin-bottom:10px">🏁 발표 끝 → 다음 수업 숙제 검사</button><p class="mute" style="text-align:center;margin-top:-4px">안 누르면 다음 수업도 이 단원 발표 (${f.presN + 1}차시)</p>`;
+  return h;
+}
+function bonusCard() {
+  const d = S.day, abs = d.session.abs || {}, sel = S.bonusSel;
+  return `<div class="card"><h3>⭐ 특별 보너스 <span class="mute">참여 점수에 더해져요</span></h3>
+    <div class="row" style="margin-bottom:8px">${[1, 2, 3, 4, 5].map(n => `<button class="${S.bonusPts === n ? 'pri' : ''}" data-a="bonusPts" data-v="${n}" style="flex:1">+${n}</button>`).join('')}</div>
+    <input id="bWhy" placeholder="사유 (선택, 예: 좋은 질문)" style="margin-bottom:8px">
+    <div class="sgrid">${d.students.map(st => { const on = sel.includes(st.id);
+      return `<button class="sbtn ${on ? 'hl' : ''} ${abs[st.id] ? 'abs' : ''}" data-a="bonusTog" data-id="${esc(st.id)}" ${abs[st.id] ? 'disabled' : ''}>${on ? '☑ ' : ''}${num2(st.id)} ${esc(st.name)}</button>`; }).join('')}</div>
+    ${(d.bonusHere || []).length ? `<div class="chips" style="margin-top:8px">${d.bonusHere.map(b => `<button class="chip y" data-a="unbonus" data-log="${esc(b.logId)}">${esc(b.name)} +${b.pts} ${esc(b.why)} ✕</button>`).join('')}</div>` : ''}
+    <div class="row" style="margin-top:10px"><button class="grow" data-a="bonusClose">닫기</button>
+      <button class="pri grow" data-a="bonusGo" style="padding:12px" ${sel.length ? '' : 'disabled'}>${sel.length ? `${sel.length}명 +${S.bonusPts}` : '학생 고르기'}</button></div></div>`;
+}
+
 function vToilet() {
   const d = S.day;
   if (!isToday()) return `<div class="card mute">오늘 수업을 고르면 화장실을 기록할 수 있어요.</div>`;
@@ -676,8 +854,32 @@ function onAction(a, el) {
       modal(`<h3>출첵 안 한 지난 수업</h3><p class="mute">지금은 <b>수업 안 한 걸로</b> 쳐요. 실제로 수업했으면 열어서 출석체크하세요. 안 했으면 그냥 두거나 휴강 표시(사유 메모).</p>
         ${d.unconfirmed.map(s => `<div class="trow"><span>${esc(sesLabel(s))}</span><button data-a="gotoSes" data-sid="${esc(s.id)}">열기</button></div>`).join('')}
         <button data-a="close" style="width:100%;margin-top:10px">닫기</button>`); break;
-    case 'gotoSes': closeModal(); S.tab = 'class'; loadClass(S.cls, el.dataset.sid); break;
-    case 'gotoAtt': S.tab = 'class'; render(); window.scrollTo(0, 0); break;
+    case 'gotoSes': closeModal(); S.tab = 'today'; loadClass(S.cls, el.dataset.sid); window.scrollTo(0, 0); break;
+    case 'gotoAtt': S.tab = 'today'; S.showAtt = true; render(); window.scrollTo(0, 0); break;
+    case 'gotoTab': S.tab = el.dataset.v; render(); window.scrollTo(0, 0); break;
+    case 'attEdit': S.showAtt = !S.showAtt; render(); break;
+    case 'unitEnd': {
+      const on = el.dataset.v === '1', f = d.flow;
+      if (on && f.nextUnit) { f.unitEnd = f.nextUnit.idx; f.endedUnit = f.nextUnit; f.sigRound = f.nextUnit; d.signup = []; S.sigMode = true; }
+      if (!on) { f.unitEnd = -1; f.endedUnit = null; f.sigRound = null; S.sigMode = false; }
+      render(); act('setUnitEnd', [S.cls, sid, on], null, keyOf(el)); break;
+    }
+    case 'presEnd': { const on = el.dataset.v === '1'; d.flow.presEnd = on; render(); act('setPresEnd', [S.cls, sid, on], null, keyOf(el)); break; }
+    case 'sigMode': S.sigMode = !S.sigMode; render(); break;
+    case 'sigAdd': {
+      d.signup.push({ no: d.signup.length + 1, id, name: stuName(id), key: '' }); render();
+      act('signup', [S.cls, sid, id, 'add', ''], r => { if (r.signup) S.day.signup = r.signup; }, `sigAdd|${id}||`); break;
+    }
+    case 'sigDel': case 'sigUp': case 'sigDown': {
+      const k = el.dataset.key; if (!k) return toast('저장 중이에요. 잠깐만요.');
+      const i = d.signup.findIndex(x => String(x.key) === k); if (i < 0) break;
+      if (a === 'sigDel') d.signup.splice(i, 1);
+      else { const j = a === 'sigUp' ? i - 1 : i + 1; if (j < 0 || j >= d.signup.length) break; [d.signup[i], d.signup[j]] = [d.signup[j], d.signup[i]]; }
+      d.signup.forEach((x, n) => x.no = n + 1); render();
+      act('signup', [S.cls, sid, '', a === 'sigDel' ? 'remove' : a === 'sigUp' ? 'up' : 'down', k], r => { if (r.signup) S.day.signup = r.signup; }); break;
+    }
+    case 'slotPick': S.slot = col; render(); break;
+    case 'presOther': S.presOther = !S.presOther; render(); break;
     case 'attPick':
       modal(`<h3>${esc(stuName(id))}</h3><div class="row">${['인정', '질병', '미인정'].map(t => `<button class="grow" data-a="attSet" data-id="${esc(id)}" data-v="${t}">${t} 결석</button>`).join('')}</div>
         <button class="ok" data-a="attSet" data-id="${esc(id)}" data-v="" style="width:100%;margin-top:8px">출석</button>`); break;
@@ -690,7 +892,7 @@ function onAction(a, el) {
         s.checked = true; s.abs = abs;
         const bt = (S.boot.today || []).find(x => x.id === sid || (x.cls === S.cls && x.date === s.date && x.period === s.period)); if (bt) bt.checked = true;
         renderClsTabs(); renderTop();
-        if (s.date === todayStr()) S.tab = 'hw';
+        S.tab = 'today'; S.showAtt = false;
         render(); window.scrollTo(0, 0);
       }
       break;
@@ -704,7 +906,11 @@ function onAction(a, el) {
       } else act('updateSession', [S.cls, sid, { status: '수업' }]);
       break;
     case 'doCancel': { const w = $('mWhy').value.trim() || '휴강'; closeModal(); act('updateSession', [S.cls, sid, { status: '휴강', reason: w }]); break; }
-    case 'saveNotes': act('updateSession', [S.cls, sid, { progress: $('fProg').value, notice: $('fNotice').value }], null, keyOf(el)); break;
+    case 'saveNotes': {
+      const p = $('fProg').value, n = $('fNotice') ? $('fNotice').value : d.session.notice;
+      d.session.progress = p; d.session.notice = n; ['fProg', 'fNotice'].forEach(k => $(k) && delete $(k).dataset.dirty);
+      act('updateSession', [S.cls, sid, { progress: p, notice: n }], null, keyOf(el)); toast('진도 저장 중…'); break;
+    }
     case 'absPick':
       modal(`<h3>${esc(stuName(id))} 출결 바꾸기</h3><div class="row">${['인정', '질병', '미인정'].map(t => `<button class="grow" data-a="absSet" data-id="${esc(id)}" data-v="${t}">${t} 결석</button>`).join('')}</div>
         <button class="ok" data-a="absSet" data-id="${esc(id)}" data-v="" style="width:100%;margin-top:8px">출석</button>
@@ -762,22 +968,25 @@ function onAction(a, el) {
     }
     case 'undoGo': { closeModal(); const g = d.grid.find(x => x.id === id); if (g) { g.cells[col] = { done: false, wait: true }; render(); } act('uncheckTask', [S.cls, sid, id, col], null, `undo|${id}|${col}|`); break; }
     case 'presPick': {
-      const pri = d.priority.some(p => p.id === id), n = d.presToday[id] || 0;
-      modal(`<h3>${esc(stuName(id))} 발표 <span class="mute">오늘 ${n}/${d.limits.presDay}</span></h3>
-        <div class="mute">${esc((d.slots.find(s => s.col === S.slot) || {}).unit || '')} 칸 · 문제 1개 ('번'은 자동)</div>
-        <input id="mProb" placeholder="예: 12  또는  3(2)" inputmode="text" style="margin:8px 0">
-        <button class="pri" data-a="presGo" data-id="${esc(id)}" style="width:100%" ${n >= d.limits.presDay ? 'disabled' : ''}>발표 등록 (+5)</button>
-        <button data-a="priToggle" data-id="${esc(id)}" data-v="${pri ? 'remove' : 'add'}" style="width:100%;margin-top:8px">${pri ? '⭐ 우선권 해제' : '⭐ 지원했는데 못 함 → 우선권 명단 맨 뒤에'}</button>`);
+      const n = (d.presRound || {})[id] || 0, lim = d.limits.presUnit || 2, sl = d.slots.find(s => s.col === S.slot) || {};
+      modal(`<h3>${esc(stuName(id))} 발표 <span class="mute">이 단원 ${n}/${lim}</span></h3>
+        <div class="mute">${esc(sl.unit || '')} ${esc(sl.type || '')} · 문제 1개 ('번'은 자동, 예: 52쪽 3번 → 52-3)</div>
+        <input id="mProb" placeholder="예: 52-3  또는  12" inputmode="text" style="margin:8px 0">
+        <button class="pri bigbtn" data-a="presGo" data-id="${esc(id)}" ${n >= lim ? 'disabled' : ''}>${n >= lim ? '이 단원 발표 다 했어요' : '발표 기록 (+5)'}</button>`);
       setTimeout(() => $('mProb') && $('mProb').focus(), 50); break;
     }
     case 'presGo': {
       const v = $('mProb').value; closeModal();
       const slot = d.slots.find(s2 => s2.col === S.slot) || {}, tmp = { presId: '', slotCol: S.slot, unit: (slot.unit || '') + ' ' + (slot.type || ''), id, name: stuName(id), problem: /번$/.test(v.trim()) ? v.trim() : v.trim() + '번', by: '교사', listeners: [] };
       d.presToday[id] = (d.presToday[id] || 0) + 1; d.pres.push(tmp);
-      d.priority = d.priority.filter(p => p.id !== id).map((p, k) => Object.assign({}, p, { no: k + 1 })); render();
-      act('present', [S.cls, sid, id, S.slot, v], r => {   // 등록되면 바로 '맞힌 학생' 고르기
+      d.presRound = d.presRound || {}; d.presRound[id] = (d.presRound[id] || 0) + 1;
+      { const i = (d.signup || []).findIndex(x => x.id === id); if (i >= 0) { d.signup.splice(i, 1); d.signup.forEach((x, k) => x.no = k + 1); } }
+      tmp.tid = 'tmp' + Date.now();
+      S.presOther = false; S.listenFor = tmp.tid; S.listenSel = []; render();   // 바로 '포인트 받을 친구' 고르기 (저장은 뒤에서)
+      act('present', [S.cls, sid, id, S.slot, v], r => {
         tmp.presId = r.presId;
-        if (S.tab === 'pres' && !S.listenFor && !S.bonusMode) { S.listenFor = r.presId; S.listenSel = []; window.scrollTo(0, 0); }
+        if (S.listenFor === tmp.tid) S.listenFor = r.presId;
+        if (tmp.queued) { const ids = tmp.queued; tmp.queued = null; sendListen(tmp, ids); }   // 기다리던 포인트 저장
       }, `presPick|${id}||`); break;
     }
     case 'priToggle': closeModal(); act('priority', [S.cls, sid, id, el.dataset.v], r => { if (r.priority) S.day.priority = r.priority; }, `presPick|${id}||`); break;
@@ -785,13 +994,13 @@ function onAction(a, el) {
     case 'listenDone': S.listenFor = ''; S.listenSel = []; render(); break;
     case 'listenTog': { const i = S.listenSel.indexOf(id); if (i >= 0) S.listenSel.splice(i, 1); else S.listenSel.push(id); render(); break; }
     case 'listenGo': {
-      const p = d.pres.find(x => x.presId === S.listenFor), ids = S.listenSel.slice();
+      const p = presOf(S.listenFor), ids = S.listenSel.slice();
       if (!p || !ids.length) break;
       ids.forEach(i => { p.listeners.push({ logId: '', id: i, name: stuName(i) }); d.listenHere[i] = (d.listenHere[i] || 0) + 1; });   // 먼저 화면에
-      act('listen', [S.cls, sid, p.presId, ids], r => (r.logs || []).forEach(x => { const l = p.listeners.find(y => y.id === x.id && !y.logId); if (l) l.logId = x.logId; }), `listenMode|||${p.presId}`);
+      if (p.presId) sendListen(p, ids); else p.queued = (p.queued || []).concat(ids);   // 발표 저장이 끝나면 이어서 보냄
       S.listenFor = ''; S.listenSel = []; render(); break;
     }
-    case 'bonusOpen': S.bonusMode = true; S.bonusSel = []; render(); window.scrollTo(0, 0); break;
+    case 'bonusOpen': S.bonusMode = !S.bonusMode; S.bonusSel = []; render(); break;
     case 'bonusClose': S.bonusMode = false; render(); break;
     case 'bonusPts': S.bonusPts = Number(el.dataset.v); { const w = $('bWhy') && $('bWhy').value; render(); if (w && $('bWhy')) $('bWhy').value = w; } break;
     case 'bonusTog': { const w = $('bWhy') && $('bWhy').value; const i = S.bonusSel.indexOf(id); if (i >= 0) S.bonusSel.splice(i, 1); else S.bonusSel.push(id); render(); if (w && $('bWhy')) $('bWhy').value = w; break; }
@@ -853,12 +1062,13 @@ function onAction(a, el) {
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-a]');
   if (b && b.tagName !== 'SELECT' && b.tagName !== 'INPUT' && !b.disabled) {
-    if (b.getAttribute('data-st') === 'wait' && !['undo'].includes(b.dataset.a)) return toast('저장 중이에요. 잠깐만요.');
+    if (b.getAttribute('data-st') === 'wait' && !['undo', 'sigAdd'].includes(b.dataset.a)) return toast('저장 중이에요. 잠깐만요.');
     onAction(b.dataset.a, b);
   }
   const c = e.target.closest('[data-cls]'); if (c) { S.tab = S.tab || 'hw'; loadClass(c.dataset.cls, ''); }
   const t = e.target.closest('[data-tab]'); if (t) { S.tab = t.dataset.tab; S.listenFor = ''; render(); window.scrollTo(0, 0); }
 });
+document.addEventListener('input', e => { if (['fProg', 'fNotice', 'bWhy'].includes(e.target.id)) e.target.dataset.dirty = 1; });
 document.addEventListener('change', e => {
   const el = e.target;
   if (el.id === 'sesSel') { loadClass(S.cls, el.value); return; }

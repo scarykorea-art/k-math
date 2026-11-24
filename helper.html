@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ko">
 <head>
 
@@ -76,7 +76,7 @@ body { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-ins
   <div id="app" class="hide">
     <div class="top"><div class="row"><b class="grow" id="hdr"></b><button class="ghost" id="reload" style="color:#fff">↻</button></div><div class="mute" id="sub"></div></div>
     <div id="view"></div>
-    <div class="foot"><a href="helper.html" target="_top">새로고침</a> · <a href="#" id="out">나가기</a> · 화면 v4</div>
+    <div class="foot"><a href="helper.html" target="_top">새로고침</a> · <a href="#" id="out">나가기</a> · 화면 v5</div>
   </div>
 </div>
 <div class="modal-bg" id="mbg"><div class="modal" id="modal"></div></div>
@@ -242,21 +242,27 @@ function render() {
     $('view').innerHTML = `<div class="card" style="text-align:center;padding:28px 14px"><b style="font-size:16px">${esc(d.why)}</b><p class="mute">${d.wait ? '열리면 자동으로 바뀌어요.' : ''}</p><button data-a="reload">↻ 다시 확인</button></div>`;
     return;
   }
-  const s = d.session, endAt = new Date(s.endMs).toTimeString().slice(0, 5);
-  $('sub').textContent = `${s.date.slice(5).replace('-', '/')} ${s.period}교시 · ${endAt}에 끝 · 하루 발표 ${d.limits.presDay}개 · 경청 발표당 ${d.limits.listenPres}명`;
+  const s = d.session, endAt = new Date(s.endMs).toTimeString().slice(0, 5), f = d.flow || {};
+  const mt = f.mode === '발표' ? `🎤 ${f.round ? f.round.name : ''} 발표 ${f.presN}차시` : f.sigRound ? `🙋 ${f.sigRound.name} 발표 신청 받는 날` : '📖 수업';
+  $('sub').textContent = `${s.date.slice(5).replace('-', '/')} ${s.period}교시 · ${mt} · 발표 한 사람 이 단원 ${d.limits.presUnit || 2}번 · 포인트 발표당 ${d.limits.listenPres}명`;
+  if (f.round && f.round.slots.length && !f.round.slots.some(x => x.col === S.slot)) S.slot = f.round.slots[0].col;
   $('view').innerHTML = S.listenFor ? vListen() : S.priMode ? vPriAdd() : vMain();
   paintSt();
 }
 function vMain() {
-  const d = S.d, abs = new Set(d.absent || []), priNo = {};
-  d.priority.forEach(p => priNo[p.id] = p.no);
-  let h = `<div class="card"><h3>📘 발표 칸</h3><select id="slotSel">${d.slots.map(s => `<option value="${s.col}" ${s.col === S.slot ? 'selected' : ''}>${esc(s.unit)} · ${esc(s.type)}</option>`).join('')}</select></div>`;
-  h += `<div class="card"><div class="row"><h3 class="grow">⭐ 발표 우선권 명단 <span class="mute">순서대로 먼저 시켜요</span></h3><button class="pri" data-a="priMode">＋ 명단 추가</button></div>
-    ${d.priority.length ? `<ul class="plist">${d.priority.map((p, i) => `<li><span class="no">${p.no}</span><b class="grow">${num2(p.id)} ${esc(p.name)} <span class="mute">${esc(p.since)}</span></b>
-      <button data-a="priUp" data-id="${esc(p.id)}" ${i ? '' : 'disabled'}>▲</button><button data-a="priDown" data-id="${esc(p.id)}" ${i < d.priority.length - 1 ? '' : 'disabled'}>▼</button><button class="bad" data-a="priDel" data-id="${esc(p.id)}">✕</button></li>`).join('')}</ul>` : '<p class="mute" style="margin:0">지원했는데 문제가 모자라 못 한 친구를 순서대로 적어요. 발표하면 자동으로 빠져요.</p>'}</div>`;
-  h += `<div class="card"><h3>🙋 발표자 고르기 <span class="mute">⭐숫자 = 우선권 순서</span></h3><div class="sgrid">${d.students.map(st => {
-    const n = d.presToday[st.id] || 0, a = abs.has(st.id), pn = priNo[st.id];
-    return `<button class="sbtn ${pn === 1 ? 'pri1' : ''} ${a ? 'abs' : ''}" data-a="presPick" data-id="${esc(st.id)}" ${a || n >= d.limits.presDay ? 'disabled' : ''}>${num2(st.id)} ${esc(st.name)}<small>${a ? '결석' : '오늘 ' + n + '/' + d.limits.presDay}</small>${pn ? `<span class="pno">⭐${pn}</span>` : ''}${n ? `<span class="cnt">${n}</span>` : ''}</button>`;
+  const d = S.d, abs = new Set(d.absent || []), f = d.flow || {}, q = d.signup || [], lim = d.limits.presUnit || 2, pr = d.presRound || {};
+  const canSign = f.mode === '발표' || !!f.sigRound;
+  let h = '';
+  if (!canSign) return `<div class="card" style="text-align:center;padding:24px 14px"><b>오늘은 발표 수업이 아니에요</b><p class="mute">선생님이 [단원 끝]을 누르면 여기서 발표 신청을 받을 수 있어요.</p><button data-a="reload">↻ 다시 확인</button></div>`;
+  if (f.mode === '발표' && f.round && f.round.slots.length > 1) h += `<div class="card"><h3>📘 발표 칸</h3><select id="slotSel">${f.round.slots.map(s => `<option value="${s.col}" ${s.col === S.slot ? 'selected' : ''}>${esc(f.round.name)} · ${esc(s.type)}</option>`).join('')}</select></div>`;
+  if (f.mode === '발표' && q[0]) h += `<div class="card" style="text-align:center;border:2px solid #7c3aed"><div class="mute">다음 발표자 (신청 1번)</div><b style="display:block;font-size:22px;margin:4px 0 10px">${num2(q[0].id)} ${esc(q[0].name)}</b><button class="pri" data-a="presPick" data-id="${esc(q[0].id)}" style="width:100%;padding:13px" ${abs.has(q[0].id) ? 'disabled' : ''}>🎤 발표 기록</button></div>`;
+  h += `<div class="card"><div class="row"><h3 class="grow">🙋 발표 신청 줄 <span class="mute">선착순 · 한 사람 ${lim}번까지</span></h3><button class="pri" data-a="priMode">＋ 신청 받기</button></div>
+    ${q.length ? `<ul class="plist">${q.map((p, i) => `<li><span class="no">${p.no}</span><b class="grow">${num2(p.id)} ${esc(p.name)}</b>
+      <button data-a="sigUp" data-key="${esc(p.key)}" ${i ? '' : 'disabled'}>▲</button><button data-a="sigDown" data-key="${esc(p.key)}" ${i < q.length - 1 ? '' : 'disabled'}>▼</button><button class="bad" data-a="sigDel" data-key="${esc(p.key)}">✕</button></li>`).join('')}</ul>` : '<p class="mute" style="margin:0">교탁 앞에서 줄 서는 순서대로 [＋ 신청 받기]에서 눌러요. 두 번 하고 싶은 친구는 줄을 한 번 더.</p>'}</div>`;
+  if (f.mode !== '발표') return h;
+  h += `<div class="card"><h3>줄에 없는 친구 발표</h3><div class="sgrid">${d.students.map(st => {
+    const n = pr[st.id] || 0, a = abs.has(st.id);
+    return `<button class="sbtn ${a ? 'abs' : ''}" data-a="presPick" data-id="${esc(st.id)}" ${a || n >= lim ? 'disabled' : ''}>${num2(st.id)} ${esc(st.name)}<small>${a ? '결석' : '이 단원 ' + n + '/' + lim}</small>${n ? `<span class="cnt">${n}</span>` : ''}</button>`;
   }).join('')}</div></div>`;
   h += `<div class="card"><h3>이번 수업 발표 ${d.pres.length}건</h3>${d.pres.slice().reverse().map(p => `
     <div class="pcard ${p.presId ? '' : 'wait'}"><div class="row"><b class="grow">${esc(p.name)} · ${esc(p.problem)}</b><span class="mute">${esc(p.unit)}</span></div>
@@ -266,8 +272,10 @@ function vMain() {
     </div>`).join('') || '<span class="mute">아직 없음</span>'}</div>`;
   return h;
 }
+const hPresOf = k => (S.d.pres || []).find(x => (x.presId && x.presId === k) || x.tid === k);
+function hSendListen(p, ids) { act('helperListen', [p.presId, ids], r => (r.logs || []).forEach(x => { const l = p.listeners.find(y => y.id === x.id && !y.logId); if (l) l.logId = x.logId; }), `listenMode||${p.presId}`); }
 function vListen() {
-  const d = S.d, p = d.pres.find(x => x.presId === S.listenFor);
+  const d = S.d, p = hPresOf(S.listenFor);
   if (!p) { S.listenFor = ''; return vMain(); }
   const abs = new Set(d.absent || []), got = new Set(p.listeners.map(l => l.id)), room = d.limits.listenPres - p.listeners.length, sel = S.listenSel;
   return `<div class="card"><h3>퀴즈 맞힌 친구 <span class="mute">최대 ${d.limits.listenPres}명 · 골라서 한 번에 +1</span></h3><div class="pcard on"><b>${esc(p.name)}</b> ${esc(p.problem)}</div>
@@ -280,11 +288,13 @@ function vListen() {
       <button class="pri grow" data-a="listenGo" style="padding:12px" ${sel.length ? '' : 'disabled'}>${sel.length ? sel.map(stuName).map(esc).join(', ') + ' +1 저장' : room + '명까지 고르기'}</button></div></div>`;
 }
 function vPriAdd() {
-  const d = S.d, priNo = {}; d.priority.forEach(p => priNo[p.id] = p.no);
-  return `<div class="card"><h3>⭐ 우선권 명단 추가 <span class="mute">누르는 순서대로 뒤에 붙어요</span></h3>
-    <div class="sgrid">${d.students.map(st => { const pn = priNo[st.id];
-      return `<button class="sbtn ${pn ? 'hl' : ''}" data-a="priAdd" data-id="${esc(st.id)}" ${pn ? 'disabled' : ''}>${num2(st.id)} ${esc(st.name)}<small>${pn ? pn + '번' : '&nbsp;'}</small>${pn ? `<span class="pno">⭐${pn}</span>` : ''}</button>`; }).join('')}</div>
-    <button class="pri" data-a="priDone" style="width:100%;margin-top:10px;padding:12px">완료</button></div>`;
+  const d = S.d, cnt = {}, lim = d.limits.presUnit || 2, pr = d.presRound || {}, abs = new Set(d.absent || []);
+  (d.signup || []).forEach(p => cnt[p.id] = (cnt[p.id] || 0) + 1);
+  return `<div class="card"><h3>🙋 발표 신청 받기 <span class="mute">줄 선 순서대로 누르기 · 한 사람 ${lim}번까지</span></h3>
+    <div class="sgrid">${d.students.map(st => { const n = (cnt[st.id] || 0) + (pr[st.id] || 0), a = abs.has(st.id);
+      return `<button class="sbtn ${cnt[st.id] ? 'hl' : ''} ${a ? 'abs' : ''}" data-a="sigAdd" data-id="${esc(st.id)}" ${n >= lim || a ? 'disabled' : ''}>${num2(st.id)} ${esc(st.name)}<small>${a ? '결석' : n + '/' + lim}</small>${cnt[st.id] ? `<span class="pno">${cnt[st.id]}</span>` : ''}</button>`; }).join('')}</div>
+    <p class="mute">신청 ${(d.signup || []).length}명</p>
+    <button class="pri" data-a="priDone" style="width:100%;margin-top:6px;padding:12px">완료</button></div>`;
 }
 
 /* ── 동작 ── */
@@ -293,25 +303,36 @@ function onAction(a, el) {
   switch (a) {
     case 'reload': load(); break;
     case 'presPick': {
-      const n = d.presToday[id] || 0;
-      modal(`<h3>${esc(stuName(id))} 발표 <span class="mute">오늘 ${n}/${d.limits.presDay}</span></h3>
-        <div class="mute">${esc((d.slots.find(s => s.col === S.slot) || {}).unit || '')} 칸 · 문제 1개 ('번'은 자동)</div>
-        <input id="mProb" placeholder="예: 12  또는  3(2)" style="margin:8px 0">
-        <button class="pri" data-a="presGo" data-id="${esc(id)}" style="width:100%;padding:12px">발표 등록</button>`);
+      const n = (d.presRound || {})[id] || 0, lim = d.limits.presUnit || 2;
+      modal(`<h3>${esc(stuName(id))} 발표 <span class="mute">이 단원 ${n}/${lim}</span></h3>
+        <div class="mute">문제 1개 ('번'은 자동, 예: 52쪽 3번 → 52-3)</div>
+        <input id="mProb" placeholder="예: 52-3  또는  12" style="margin:8px 0">
+        <button class="pri" data-a="presGo" data-id="${esc(id)}" style="width:100%;padding:12px">발표 기록</button>`);
       setTimeout(() => $('mProb') && $('mProb').focus(), 50); break;
     }
     case 'presGo': {
       const v = $('mProb').value.trim(); if (!v) return toastErr('문제 번호를 적어 주세요.');
       closeModal();
       d.presToday[id] = (d.presToday[id] || 0) + 1;
-      const tmp = { presId: '', id, name: stuName(id), problem: /번$/.test(v) ? v : v + '번', unit: '', listeners: [], mine: true };
+      d.presRound = d.presRound || {}; d.presRound[id] = (d.presRound[id] || 0) + 1;
+      const tmp = { presId: '', tid: 'tmp' + Date.now(), id, name: stuName(id), problem: /번$/.test(v) ? v : v + '번', unit: '', listeners: [], mine: true };
       d.pres.push(tmp);
-      d.priority = d.priority.filter(p => p.id !== id).map((p, i) => Object.assign({}, p, { no: i + 1 }));
-      render();
-      act('helperPresent', [id, S.slot, v], r => {   // 등록되면 바로 '맞힌 친구' 고르기
+      { const i = (d.signup || []).findIndex(p => p.id === id); if (i >= 0) { d.signup.splice(i, 1); d.signup.forEach((p, k) => p.no = k + 1); } }
+      S.listenFor = tmp.tid; S.listenSel = []; render(); window.scrollTo(0, 0);   // 바로 '포인트 받을 친구' 고르기
+      act('helperPresent', [id, S.slot, v], r => {
         tmp.presId = r.presId;
-        if (!S.listenFor && !S.priMode) { S.listenFor = r.presId; S.listenSel = []; window.scrollTo(0, 0); }
+        if (S.listenFor === tmp.tid) S.listenFor = r.presId;
+        if (tmp.queued) { const ids = tmp.queued; tmp.queued = null; hSendListen(tmp, ids); }
       }, `presPick|${id}|`); break;
+    }
+    case 'sigAdd': d.signup = d.signup || []; d.signup.push({ no: d.signup.length + 1, id, name: stuName(id), key: '' }); render(); act('helperSignup', [id, 'add', ''], r => { if (r.signup) S.d.signup = r.signup; }, `sigAdd|${id}|`); break;
+    case 'sigDel': case 'sigUp': case 'sigDown': {
+      const k = el.dataset.key; if (!k) return toast('저장 중이에요. 잠깐만요.');
+      const i = d.signup.findIndex(x => String(x.key) === k); if (i < 0) break;
+      if (a === 'sigDel') d.signup.splice(i, 1);
+      else { const j = a === 'sigUp' ? i - 1 : i + 1; if (j < 0 || j >= d.signup.length) break; [d.signup[i], d.signup[j]] = [d.signup[j], d.signup[i]]; }
+      d.signup.forEach((x, n) => x.no = n + 1); render();
+      act('helperSignup', ['', a === 'sigDel' ? 'remove' : a === 'sigUp' ? 'up' : 'down', k], r => { if (r.signup) S.d.signup = r.signup; }); break;
     }
     case 'unpresent': modal(`<h3>발표를 취소할까요?</h3><div class="row"><button class="grow" data-a="close">닫기</button><button class="bad grow" data-a="unpresentGo" data-pres="${esc(el.dataset.pres)}">발표 취소</button></div>`); break;
     case 'unpresentGo': { closeModal(); const pid = el.dataset.pres, p = d.pres.find(x => x.presId === pid); if (p) { d.pres = d.pres.filter(x => x !== p); d.presToday[p.id] = Math.max(0, (d.presToday[p.id] || 1) - 1); render(); } act('helperUnpresent', [pid]); break; }
@@ -319,10 +340,10 @@ function onAction(a, el) {
     case 'listenClose': S.listenFor = ''; S.listenSel = []; render(); break;
     case 'listenTog': { const i = S.listenSel.indexOf(id); if (i >= 0) S.listenSel.splice(i, 1); else S.listenSel.push(id); render(); break; }
     case 'listenGo': {
-      const p = d.pres.find(x => x.presId === S.listenFor), ids = S.listenSel.slice();
+      const p = hPresOf(S.listenFor), ids = S.listenSel.slice();
       if (!p || !ids.length) break;
       ids.forEach(i => { p.listeners.push({ logId: '', id: i, name: stuName(i), mine: true }); d.listenHere[i] = (d.listenHere[i] || 0) + 1; });
-      act('helperListen', [p.presId, ids], r => (r.logs || []).forEach(x => { const l = p.listeners.find(y => y.id === x.id && !y.logId); if (l) l.logId = x.logId; }), `listenMode||${p.presId}`);
+      if (p.presId) hSendListen(p, ids); else p.queued = (p.queued || []).concat(ids);
       S.listenFor = ''; S.listenSel = []; render(); break;
     }
     case 'unlisten': { const lg = el.dataset.log; if (!lg) break; d.pres.forEach(p => { const i = p.listeners.findIndex(l => l.logId === lg); if (i >= 0) { d.listenHere[p.listeners[i].id]--; p.listeners.splice(i, 1); } }); render(); act('helperUnlisten', [lg]); break; }
@@ -342,7 +363,7 @@ function onAction(a, el) {
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-a]');
   if (!b || b.tagName === 'SELECT' || b.disabled) return;
-  if (b.getAttribute('data-st') === 'wait') return toast('저장 중이에요. 잠깐만요.');
+  if (b.getAttribute('data-st') === 'wait' && b.dataset.a !== 'sigAdd') return toast('저장 중이에요. 잠깐만요.');
   onAction(b.dataset.a, b);
 });
 document.addEventListener('change', e => { if (e.target.id === 'slotSel') S.slot = Number(e.target.value); });
