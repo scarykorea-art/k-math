@@ -3,6 +3,18 @@
 <head>
 
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f1f5f9">
+<meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="교사용 수행평가">
+<meta name="format-detection" content="telephone=no">
+<title>교사용 수행평가</title>
+<style>
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+button, a, label, select, input, [data-a], [data-tab], [data-cls] { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+body { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); overscroll-behavior-y: contain; }
+</style>
+
 <style>
   * { box-sizing: border-box; min-width: 0; }
   :root { --bg:#f1f5f9; --card:#fff; --ink:#0f172a; --mute:#64748b; --line:#e2e8f0; --ac:#2563eb; --ok:#16a34a; --warn:#d97706; --bad:#dc2626; }
@@ -22,7 +34,14 @@
   .cls-tabs { display: grid; grid-template-columns: repeat(auto-fit, minmax(70px, 1fr)); gap: 5px; }
   .cls-tabs button { padding: 9px 4px; background: #fff; border: 1.5px solid var(--line); }
   .cls-tabs button.on { background: var(--ac); color: #fff; border-color: var(--ac); }
-  .cls-tabs small { display: block; font-weight: 400; font-size: 11px; opacity: .85; }
+  .cls-tabs small { display: block; font-weight: 400; font-size: 11px; opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  @media (max-width: 600px) {   /* 폰: 반 칸은 한 줄(넘치면 옆으로 밀기) → 위에 붙는 영역을 얇게 */
+    .cls-tabs { display: flex; overflow-x: auto; scrollbar-width: none; }
+    .cls-tabs::-webkit-scrollbar { display: none; }
+    .cls-tabs button { flex: 1 0 68px; padding: 7px 4px; }
+    .top { padding: 4px 0 3px; }
+    .sesbar { margin-top: 4px; }
+  }
   .sesbar { display: flex; gap: 6px; align-items: center; margin-top: 6px; }
   .sesbar select { padding: 7px; font-size: 14px; }
   .badge { display: inline-block; padding: 2px 7px; border-radius: 10px; font-size: 11px; font-weight: 700; }
@@ -106,7 +125,7 @@
     </div>
     <div id="topAlert"></div>
     <div id="view"></div>
-    <div class="foot"><a href="admin.html" target="_top">새로고침</a> · 화면 v12</div>
+    <div class="foot"><a href="admin.html" target="_top">새로고침</a> · 화면 v13</div>
   </div>
 </div>
 
@@ -199,14 +218,15 @@ function boot() {
     S.boot = r;
     $('login').classList.add('hide'); $('app').classList.remove('hide'); $('tabs').classList.remove('hide');
     S.cls = r.day.cls; renderClsTabs(); setDay(r.day);   // 첫 반 데이터가 같이 옴 (왕복 1번)
-    resumePend();
+    resumePend(); resumeOb();
   }, m => { logout(m); }, true);
 }
 function renderClsTabs() {
   const b = S.boot;
   $('clsTabs').innerHTML = b.classes.map(c => {
-    const t = b.today.filter(s => s.cls === c.cls && s.open).map(s => s.period + '교시' + (s.checked ? '✅' : '')).join('·');
-    return `<button data-cls="${esc(c.cls)}" class="${c.cls === S.cls ? 'on' : ''}">${esc(c.label)}<small>${t ? '오늘 ' + t : '&nbsp;'}</small></button>`;
+    const ss = b.today.filter(s => s.cls === c.cls && s.open);
+    const t = ss.map(s => s.period + (ss.length > 1 ? '' : '교시') + (s.checked ? '✅' : '')).join('·') + (ss.length > 1 ? '교시' : '');
+    return `<button data-cls="${esc(c.cls)}" class="${c.cls === S.cls ? 'on' : ''}" title="${ss.length ? '오늘 ' + esc(t) : ''}">${esc(c.label)}<small>${ss.length ? '오늘 ' + t : '&nbsp;'}</small></button>`;
   }).join('');
 }
 function loadClass(cls, sid, quiet) {
@@ -242,25 +262,81 @@ function setSt(key, st) {
 function paintSt() {
   document.querySelectorAll('[data-a]').forEach(el => { const v = S.st[keyOf(el)]; if (v) el.setAttribute('data-st', v); else el.removeAttribute('data-st'); });
 }
+/* 저장 대기열: 누른 동작은 이 기기에 먼저 적어 두고(창이 닫혀도 남음), 0.3초 모았다가 한 번에(batch) 보냄.
+   동작마다 번호(u)가 붙어서, 끊겨서 다시 보내도 서버가 두 번 기록하지 않음. */
+const OKEY = 'k_obox', OB = [];
+let obBusy = false;
+const obSave = () => { try { const a = OB.map(o => ({ u: o.u, fn: o.fn, args: o.args, cls: o.cls, key: o.key, date: o.date, ts: o.ts })); a.length ? localStorage.setItem(OKEY, JSON.stringify(a)) : localStorage.removeItem(OKEY); } catch (e) {} };
+const obDrop = o => { const i = OB.indexOf(o); if (i >= 0) OB.splice(i, 1); obSave(); };
 function act(fn, args, after, key) {
-  const cls = S.cls;
   S.q++; S.gen++; setSt(key, 'wait');
+  OB.push({ u: Date.now().toString(36) + Math.random().toString(36).slice(2, 8), fn, args, cls: S.cls, key, date: todayStr(), ts: Date.now(), after });
+  obSave();
+  clearTimeout(act.t); act.t = setTimeout(flushOb, 300);
+}
+function obResult(o, r) {
+  const cls = o.cls; let after = o.after;
+  S.q--;
+  if (!r || !r.success) {
+    setSt(o.key, 'err');
+    if (r && r.auth) return logout(r.message);
+    toastErr((r && r.message) || '저장 실패');
+    if (S.cls === cls) syncSoon(10);   // 실패 → 서버 기준으로 되돌림
+    return;
+  }
+  setSt(o.key, 'ok');
+  if (r.msg) toast(r.msg + ' ✓');
+  if (r.dup) { if (S.cls === cls) syncSoon(); return; }   // 다시 보낸 것 → 이미 저장돼 있음
+  if (r.cls && S.cls === cls) { if (S.q === 0) setDay(r); }
+  else if (S.cls === cls) { after && after(r); after = null; render(); syncSoon(); }
+  if (r.detail && S.stu) { S.stuDetail = r.detail; if (S.tab === 'stu') render(); }
+  after && after(r);
+}
+function flushOb() {
+  clearTimeout(act.t);
+  if (obBusy || !S.token) return;
+  const items = OB.filter(o => !o.sent);
+  if (!items.length) return;
+  obBusy = true; items.forEach(o => o.sent = 1);
   QCHAIN = QCHAIN.then(() => new Promise(res => {
-    call(fn, [S.token, ...args], r => {
-      S.q--; setSt(key, 'ok');
-      if (r.msg) toast(r.msg + ' ✓');
-      if (r.cls && S.cls === cls) { if (S.q === 0) setDay(r); }
-      else if (S.cls === cls) { after && after(r); after = null; render(); syncSoon(); }
-      if (r.detail && S.stu) { S.stuDetail = r.detail; if (S.tab === 'stu') render(); }
-      after && after(r);
-      res();
-    }, m => {
-      S.q--; setSt(key, 'err'); toastErr(m);
-      if (S.cls === cls) syncSoon(10);   // 실패 → 서버 기준으로 되돌림
-      res();
+    const fin = () => { obBusy = false; res(); if (OB.some(o => !o.sent)) flushOb(); };
+    sendBatch(items, results => {
+      items.forEach((o, i) => { obDrop(o); obResult(o, results[i]); });
+      fin();
+    }, m => {   // 연결 문제 → 기기에 남겨 두고 다시 보냄 (번호가 같아서 중복 저장 안 됨)
+      items.forEach(o => o.sent = 0);
+      toastErr('연결이 불안정해요. 이 기기에 남겨 두고 다시 보낼게요.');
+      clearTimeout(flushOb.r); flushOb.r = setTimeout(flushOb, 4000);
+      fin();
     });
   }));
 }
+/** 한 번에 보내기(batch). 서버가 옛 코드면 하나씩 */
+function sendBatch(items, done, fail) {
+  if (S.noBatch) {
+    const out = [];
+    const step = i => {
+      if (i >= items.length) return done(out);
+      const o = items[i];
+      call(o.fn, [S.token, ...o.args], r => { out.push(r); step(i + 1); }, m => { if (!out.length && /서버 오류|늦어요/.test(m)) return fail(m); out.push({ success: false, message: m }); step(i + 1); }, true);
+    };
+    return step(0);
+  }
+  call('batch', [items.map(o => ({ fn: o.fn, args: [S.token, ...o.args], u: o.u }))], r => done(r.results || []), m => {
+    if (/알 수 없는 요청|function not found|batch/i.test(m)) { S.noBatch = true; return sendBatch(items, done, fail); }
+    fail(m);
+  }, true);
+}
+/** 앱을 열 때: 지난번에 못 보낸 동작 이어서 보내기 (다른 탭이 방금 넣은 건 건드리지 않음) */
+function resumeOb() {
+  let a = []; try { a = JSON.parse(localStorage.getItem(OKEY) || '[]'); } catch (e) {}
+  const now = Date.now(), mine = a.filter(o => o.date === todayStr() && now - (o.ts || 0) > 15000), old = a.filter(o => o.date !== todayStr());
+  if (old.length) toastErr(`지난 날 못 보낸 기록 ${old.length}개는 버렸어요. 필요하면 다시 입력해 주세요.`);
+  mine.forEach(o => { if (!OB.some(x => x.u === o.u)) { OB.push(Object.assign(o, { sent: 0 })); S.q++; setSt(o.key, 'wait'); } });
+  if (mine.length || old.length) obSave();
+  if (mine.length) { toast(`못 보낸 기록 ${mine.length}개를 이어서 저장할게요`); flushOb(); }
+}
+addEventListener('online', () => { flushOb(); flushPend(); });
 /** 손을 멈추면 서버 기준으로 한 번 맞춤 (그 사이 새로 누르면 버림) */
 function syncSoon(ms) {
   clearTimeout(syncSoon.t);
@@ -323,7 +399,7 @@ function flushPend() {
     }));
   });
 }
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') { clearTimeout(checkOne.t); flushPend(); } });
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') { clearTimeout(checkOne.t); flushPend(); flushOb(); } });
 /** 한 번에 저장(checkTasks). 서버가 아직 옛 코드면 칸마다 checkTask로 대신 보냄 */
 function sendGroup(cls, sid, items, done, fail) {
   if (!S.noBatch) return call('checkTasks', [S.token, cls, sid, items.map(p => ({ id: p.id, col: p.col }))], r => done(r.results), m => {
@@ -592,7 +668,18 @@ function onAction(a, el) {
         <button class="ok" data-a="attSet" data-id="${esc(id)}" data-v="" style="width:100%;margin-top:8px">출석</button>`); break;
     case 'attSet': closeModal(); if (!S.att) break; if (el.dataset.v) S.att.abs[id] = el.dataset.v; else delete S.att.abs[id]; render(); break;
     case 'attAll': if (S.att) S.att.abs = {}; render(); break;
-    case 'attSave': act('saveAttendance', [S.cls, sid, (S.att && S.att.sid === sid) ? S.att.abs : {}], r => { if (r.session && r.session.checked && r.session.date === todayStr()) { S.tab = 'hw'; render(); window.scrollTo(0, 0); } }, keyOf(el)); break;
+    case 'attSave': {   // 출첵: 화면은 바로 '출첵 완료'로 넘기고 저장은 뒤에서
+      const abs = (S.att && S.att.sid === sid) ? Object.assign({}, S.att.abs) : {}, s = d.session;
+      act('saveAttendance', [S.cls, sid, abs], null, keyOf(el));
+      if (s && s.id === sid) {
+        s.checked = true; s.abs = abs;
+        const bt = (S.boot.today || []).find(x => x.id === sid || (x.cls === S.cls && x.date === s.date && x.period === s.period)); if (bt) bt.checked = true;
+        renderClsTabs(); renderTop();
+        if (s.date === todayStr()) S.tab = 'hw';
+        render(); window.scrollTo(0, 0);
+      }
+      break;
+    }
     case 'attCancel':
       modal(`<h3>출첵 취소</h3><p>이 수업을 <b>안 한 걸로</b> 바꿀까요? 결석 기록도 지워져요.</p><div class="row"><button class="grow" data-a="close">닫기</button><button class="bad grow" data-a="attCancelGo">출첵 취소</button></div>`); break;
     case 'attCancelGo': closeModal(); act('cancelAttendance', [S.cls, sid], null, 'attCancel|||'); break;
