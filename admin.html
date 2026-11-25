@@ -141,7 +141,7 @@ body { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-ins
     </div>
     <div id="topAlert"></div>
     <div id="view"></div>
-    <div class="foot"><a href="admin.html" target="_top">새로고침</a> · 화면 v15</div>
+    <div class="foot"><a href="admin.html" target="_top">새로고침</a> · 화면 v16</div>
   </div>
 </div>
 
@@ -184,7 +184,7 @@ window.google = { script: {
 {
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const BASE = './';   // 배포 주소 (학생 화면 미리보기용)
+const BASE = "https://script.google.com/macros/s/AKfycbx7qXAz1wtloSsjqx3fTTIPi9GUXDKJZ9tsfLvEjrCf7Yj-fFZUG_pYFP4qLbrdTu2H0Q/exec";   // 배포 주소 (학생 화면 미리보기용)
 const S = { token: '', boot: null, cls: '', sid: '', day: null, tab: 'hw', slot: 0, listenFor: '', stu: '', stuDetail: null, pending: 0, seq: 0, att: null, lastSid: '', listenSel: [], bonusMode: false, bonusSel: [], bonusPts: 1, q: 0, gen: 0, st: {} };
 try { S.token = localStorage.getItem('k_keep') || sessionStorage.getItem('k_tok') || ''; S.tab = sessionStorage.getItem('k_tab') || 'hw'; } catch (e) {}
 const DOW = ['일', '월', '화', '수', '목', '금', '토'];
@@ -1034,7 +1034,7 @@ function onAction(a, el) {
     case 'stuPick': {   // 이름 누르면 그 학생이 보는 학생용 페이지를 그대로 띄움
       const u = BASE + '?preview=' + encodeURIComponent(id);
       S.pvId = id; $('pvName').textContent = `👀 ${num2(id)} ${stuName(id)} — 학생 화면`;
-      $('pvOpen').href = u; $('pvFrame').src = u; $('pv').classList.remove('hide');
+      const ut = u + '#t=' + encodeURIComponent(S.token || ''); $('pvOpen').href = ut; $('pvFrame').src = ut; $('pv').classList.remove('hide');   // 11/25: 학생 화면은 Apps Script 주소라 저장소가 달라서, 미리보기 창에만 로그인 정보를 # 뒤로 넘김 (서버로는 안 감)
       break;
     }
     case 'pvClose': $('pv').classList.add('hide'); $('pvFrame').src = 'about:blank'; break;
