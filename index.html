@@ -70,7 +70,7 @@ body { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-ins
     <button class="btn" id="go">내 기록 보기</button>
   </div>
   <div id="out"></div>
-  <div class="foot"><a href="./" target="_top">새로고침</a> · 화면 v8</div>
+  <div class="foot"><a href="./" target="_top">새로고침</a> · 화면 v9</div>
 </div>
 <script>
 // ── GitHub Pages용: google.script.run 대신 Apps Script(doPost)에 직접 요청 ──
@@ -168,7 +168,7 @@ function view(r) {
       rows += `<tr><td>📗 교과서 ${pb.kyo}개 × 9</td><td>${sg(pb.kyoScore)}</td></tr>
         <tr><td>🌟 경청·보너스</td><td>${sg(pb.bonus)}</td></tr>
         <tr><td>⏰ 늦게 낸 과제 감점</td><td class="${pb.late < 0 ? 'neg' : ''}">${sg(pb.late)}</td></tr>
-        <tr><td>🚻 수업 중 화장실 감점</td><td class="${pb.toilet < 0 ? 'neg' : ''}">${sg(pb.toilet)}</td></tr>
+        <tr><td>🚻 화장실에 쓴 포인트</td><td class="${pb.toilet < 0 ? 'neg' : ''}">${sg(pb.toilet)}</td></tr>
         ${etc ? `<tr><td>✏️ 선생님 조정</td><td>${sg(etc)}</td></tr>` : ''}`;
     } else rows += `<tr><td>📗 교과서·경청 선물·감점</td><td>${sg(q.otherSum)}</td></tr>`;
     rows += `<tr class="sum"><td>참여 점수 합계</td><td>${q.partSum}</td></tr>`;
@@ -203,8 +203,8 @@ function view(r) {
     <div class="rules" style="margin-top:10px">• 발표 1문제 = +5점 (하루 최대 2문제)<br>• 친구 발표 뒤 퀴즈를 맞히면 <b>나에게</b> 경청 선물 +1점 (한 수업 최대 2점)<br>• 수업 중 특별히 잘하면 선생님 보너스 +1~+5</div></div>`;
 
   // 6. 화장실
-  h += `<div class="card"><h3>🚻 수업 중 화장실 <small>${r.toiletCount}번 · ${d.toilet || 0}점</small></h3>
-    <div class="rules">• 수업 중 화장실은 학기 동안 <b>N번째에 -N점</b> (한 번에 최대 -${r.capToilet}점)<br>• <b>몸이 아프거나 질병 때문에 화장실을 자주 가야 하면 꼭 미리 선생님께 말하세요.</b> 미리 말한 경우는 감점 안 해요.</div></div>`;
+  h += `<div class="card"><h3>🚻 수업 중 화장실 <small>${r.toiletCount}번 · ${Math.abs(d.toilet || 0)}포인트 사용</small></h3>
+    <div class="rules">• 벌점이 아니라 <b>참여 포인트를 써서</b> 다녀오는 거예요. 급하면 편하게 다녀오세요.<br>• 학기 동안 <b>N번째에 N포인트</b>를 써요 (한 번에 최대 ${r.capToilet}포인트)<br>• <b>몸이 아프거나 질병 때문에 화장실을 자주 가야 하면 꼭 미리 선생님께 말하세요.</b> 미리 말한 경우는 포인트를 안 써요.</div></div>`;
 
   h += seteukCard(r) + guide(r) + again();
   return h;
@@ -233,8 +233,9 @@ const guide = r => `<div class="card guide"><h3>📖 우리 수학 수업은 이
     <li>친구 발표 뒤 퀴즈를 맞히면 경청 선물 +1점 (한 수업 최대 2점).</li>
   </ul></details>
   <details><summary>🚻 수업 중 화장실</summary><ul>
-    <li>학기 동안 N번째로 가면 참여 -N점 (한 번에 최대 -${r.capToilet}점), 학기 내내 쌓여요.</li>
-    <li>아프거나 질병 때문에 자주 가야 하면 <b>꼭 미리</b> 선생님께 말하세요. 미리 말하면 감점 안 해요.</li>
+    <li>수업 중 화장실은 <b>벌점이 아니에요.</b> 모아 둔 참여 포인트를 <b>써서</b> 다녀오는 거예요. 급하면 눈치 보지 말고 다녀오세요.</li>
+    <li>학기 동안 N번째로 갈 때 <b>N포인트</b>를 써요 (한 번에 최대 ${r.capToilet}포인트). 학기 내내 이어서 세요.</li>
+    <li>아프거나 질병 때문에 자주 가야 하면 <b>꼭 미리</b> 선생님께 말하세요. 미리 말하면 포인트를 안 써요.</li>
   </ul></details>
   <details><summary>🏆 점수 · 세특 공개</summary><ul>
     <li>영역 점수(발표·의사소통, 문제 해결, 독서·창의 사고)는 수행평가가 끝나면 공개해요.</li>
